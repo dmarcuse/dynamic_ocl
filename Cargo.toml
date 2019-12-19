@@ -1,0 +1,10 @@
+[package]
+name = "dynamic_ocl"
+version = "0.1.0-alpha"
+authors = ["Dominic Marcuse <dominic@marcuse.us>"]
+edition = "2018"
+
+[dependencies]
+libc = "0.2.66"
+dlopen = "0.1.8"
+dlopen_derive = "0.1.4"
