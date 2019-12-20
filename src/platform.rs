@@ -15,7 +15,7 @@ pub struct Platform {
 
 impl Debug for Platform {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "Platform({:x?})", self.id)
+        self.info_fmt(f)
     }
 }
 
@@ -94,5 +94,6 @@ impl Platform {
         pub fn name(&self) => self.get_info_string(CL_PLATFORM_NAME);
         pub fn vendor(&self) => self.get_info_string(CL_PLATFORM_VENDOR);
         pub fn extensions(&self) => self.get_info_string(CL_PLATFORM_EXTENSIONS);
+        pub fn host_timer_resolution(&self) => self.get_info_ulong(CL_PLATFORM_HOST_TIMER_RESOLUTION);
     }
 }

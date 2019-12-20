@@ -7,10 +7,6 @@ pub fn main() {
     println!("Successfully loaded OpenCL: {:#?}", ocl);
 
     for platform in ocl.get_platforms().unwrap() {
-        println!(
-            "Got platform {:?} - name {:?}",
-            platform,
-            platform.name().unwrap()
-        );
+        println!("Got platform {:#?}", platform);
     }
 }

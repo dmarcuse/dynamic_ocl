@@ -77,7 +77,8 @@ macro_rules! ocl_try {
 }
 
 macro_rules! info_func_ret_type {
-    ( get_info_string ) => { crate::Result<std::ffi::CString> }
+    ( get_info_string ) => { crate::Result<std::ffi::CString> };
+    ( get_info_ulong ) => { crate::Result<crate::raw::cl_ulong> };
 }
 
 macro_rules! info_funcs {
@@ -93,5 +94,11 @@ macro_rules! info_funcs {
                 <Self as crate::util::OclInfo>::$delegate(self, crate::raw::$param)
             }
         )*
+
+        fn info_fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.debug_struct(std::any::type_name::<Self>())
+                $( .field(stringify!($param), &self.$name()) )*
+                .finish()
+        }
     }
 }

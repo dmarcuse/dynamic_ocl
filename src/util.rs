@@ -1,4 +1,6 @@
+use crate::raw::cl_ulong;
 use crate::Result;
+use std::convert::TryInto;
 use std::ffi::CString;
 use std::ptr::null_mut;
 
@@ -56,6 +58,15 @@ pub trait OclInfo: sealed::OclInfoInternal {
         }
 
         Ok(CString::new(bytes).unwrap())
+    }
+
+    fn get_info_ulong(&self, param_name: Self::Param) -> Result<cl_ulong> {
+        Ok(cl_ulong::from_ne_bytes(
+            self.get_info_raw(param_name)?
+                .as_slice()
+                .try_into()
+                .expect("invalid info size"),
+        ))
     }
 }
 
