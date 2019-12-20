@@ -1,12 +1,16 @@
 extern crate dynamic_ocl;
 
-use dlopen::utils::platform_file_name;
-use dlopen::wrapper::Container;
-use dynamic_ocl::raw::OpenCL;
+use dynamic_ocl::OpenCL;
 
 pub fn main() {
-    let ocl: Container<OpenCL> = unsafe { Container::load(platform_file_name("OpenCL")) }
-        .expect("Error loading OpenCL library");
+    let ocl = OpenCL::load().unwrap();
+    println!("Successfully loaded OpenCL: {:#?}", ocl);
 
-    println!("Successfully loaded OpenCL: {:#?}", *ocl);
+    for platform in ocl.get_platforms().unwrap() {
+        println!(
+            "Got platform {:?} - name {:?}",
+            platform,
+            platform.name().unwrap()
+        );
+    }
 }

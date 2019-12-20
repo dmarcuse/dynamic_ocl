@@ -6,7 +6,8 @@
     non_snake_case,
     clippy::unreadable_literal,
     clippy::identity_op,
-    clippy::too_many_arguments
+    clippy::too_many_arguments,
+    clippy::missing_safety_doc
 )]
 
 use libc::{c_char, c_uchar, intptr_t, size_t};

@@ -1,8 +1,9 @@
 /// Create a new opaque type
 macro_rules! opaque_type {
     ( $name:ident ) => {
+        #[doc(hidden)]
         pub struct $name {
-            _opaque: [u8],
+            _opaque: (),
         }
     };
 
@@ -28,6 +29,7 @@ macro_rules! error_codes {
     };
 }
 
+/// Define raw OpenCL function bindings
 macro_rules! raw_functions {
     (
         $(
@@ -59,8 +61,37 @@ macro_rules! raw_functions {
         )*
 
         #[derive(Debug, WrapperMultiApi)]
-        pub struct OpenCL {
+        pub struct RawOpenCL {
             $( pub $apiname: $apity, )*
         }
+    }
+}
+
+macro_rules! ocl_try {
+    ( $ctx:expr => $e:expr ) => {
+        match $e {
+            crate::raw::CL_SUCCESS => {}
+            e => return Err(crate::ApiError::new(e, $ctx).into()),
+        }
+    };
+}
+
+macro_rules! info_func_ret_type {
+    ( get_info_string ) => { crate::Result<std::ffi::CString> }
+}
+
+macro_rules! info_funcs {
+    (
+        $(
+            $( #[ $outer:meta ] )*
+            pub fn $name:ident(&self) => self.$delegate:ident($param:ident);
+        )*
+    ) => {
+        $(
+            $( #[ $outer ] )*
+            pub fn $name(&self) -> info_func_ret_type!($delegate) {
+                <Self as crate::util::OclInfo>::$delegate(self, crate::raw::$param)
+            }
+        )*
     }
 }
