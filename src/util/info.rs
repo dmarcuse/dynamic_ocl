@@ -1,7 +1,9 @@
-use crate::raw::cl_ulong;
+use crate::raw::{cl_uint, cl_ulong, CL_FALSE};
 use crate::Result;
+use libc::size_t;
 use std::convert::TryInto;
 use std::ffi::CString;
+use std::mem::size_of;
 use std::ptr::null_mut;
 
 pub(crate) mod sealed {
@@ -68,6 +70,67 @@ pub trait OclInfo: sealed::OclInfoInternal {
                 .expect("invalid info size"),
         ))
     }
+
+    fn get_info_uint(&self, param_name: Self::Param) -> Result<cl_uint> {
+        Ok(cl_uint::from_ne_bytes(
+            self.get_info_raw(param_name)?
+                .as_slice()
+                .try_into()
+                .expect("invalid info size"),
+        ))
+    }
+
+    fn get_info_size_t(&self, param_name: Self::Param) -> Result<size_t> {
+        Ok(size_t::from_ne_bytes(
+            self.get_info_raw(param_name)?
+                .as_slice()
+                .try_into()
+                .expect("invalid info size"),
+        ))
+    }
+
+    fn get_info_bool(&self, param_name: Self::Param) -> Result<bool> {
+        self.get_info_uint(param_name).map(|b| b != CL_FALSE)
+    }
 }
 
 impl<T: sealed::OclInfoInternal> OclInfo for T {}
+
+pub(crate) trait OclInfoFrom<T>: Sized {
+    fn convert(value: T) -> Result<Self>;
+}
+
+impl<T: Sized> OclInfoFrom<T> for T {
+    fn convert(value: T) -> Result<Self> {
+        Ok(value)
+    }
+}
+
+impl OclInfoFrom<Vec<u8>> for Vec<size_t> {
+    fn convert(value: Vec<u8>) -> Result<Self> {
+        assert_eq!(
+            value.len() % size_of::<size_t>(),
+            0,
+            "expected data length to be a multiple of {}",
+            size_of::<size_t>()
+        );
+
+        Ok(value
+            .chunks_exact(size_of::<size_t>())
+            .map(|v| size_t::from_ne_bytes(v.try_into().unwrap()))
+            .collect())
+    }
+}
+
+impl<T> OclInfoFrom<size_t> for *mut T {
+    fn convert(value: usize) -> Result<Self> {
+        Ok(value as _)
+    }
+}
+
+pub(crate) fn info_convert<F, T>(value: F) -> Result<T>
+where
+    T: OclInfoFrom<F>,
+{
+    T::convert(value)
+}

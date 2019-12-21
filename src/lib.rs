@@ -70,8 +70,10 @@ mod lib {
     }
 }
 
+pub mod device;
 mod error;
 pub mod platform;
+pub mod queue;
 pub mod util;
 
 pub use error::*;

@@ -1,7 +1,9 @@
-use crate::raw::{cl_platform_id, cl_platform_info};
+use crate::device::{Device, DeviceType};
+use crate::raw::{cl_platform_id, cl_platform_info, cl_ulong};
 use crate::util::sealed::OclInfoInternal;
 use crate::{OpenCL, Result};
 use std::ffi::c_void;
+use std::ffi::CString;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ptr::null_mut;
@@ -9,8 +11,8 @@ use std::ptr::null_mut;
 /// An OpenCL platform
 #[derive(Clone)]
 pub struct Platform {
-    ocl: crate::OpenCL,
-    id: cl_platform_id,
+    pub(crate) ocl: crate::OpenCL,
+    pub(crate) id: cl_platform_id,
 }
 
 impl Debug for Platform {
@@ -88,12 +90,44 @@ impl OclInfoInternal for Platform {
 }
 
 impl Platform {
+    pub fn get_devices(&self, typ: DeviceType) -> Result<Vec<Device>> {
+        unsafe {
+            let mut num_devices = 0u32;
+
+            ocl_try!("clGetDeviceIDs" => self.ocl.raw().CL10.clGetDeviceIDs(
+                self.id,
+                typ.raw(),
+                0,
+                null_mut(),
+                &mut num_devices as _
+            ));
+
+            let mut ids = vec![null_mut(); num_devices as usize];
+
+            ocl_try!("clGetDeviceIDs" => self.ocl.raw().CL10.clGetDeviceIDs(
+                self.id,
+                typ.raw(),
+                num_devices,
+                ids.as_mut_ptr(),
+                &mut num_devices as _,
+            ));
+
+            Ok(ids
+                .into_iter()
+                .map(|id| Device {
+                    id,
+                    ocl: self.ocl.clone(),
+                })
+                .collect())
+        }
+    }
+
     info_funcs! {
-        pub fn profile(&self) => self.get_info_string(CL_PLATFORM_PROFILE);
-        pub fn version(&self) => self.get_info_string(CL_PLATFORM_VERSION);
-        pub fn name(&self) => self.get_info_string(CL_PLATFORM_NAME);
-        pub fn vendor(&self) => self.get_info_string(CL_PLATFORM_VENDOR);
-        pub fn extensions(&self) => self.get_info_string(CL_PLATFORM_EXTENSIONS);
-        pub fn host_timer_resolution(&self) => self.get_info_ulong(CL_PLATFORM_HOST_TIMER_RESOLUTION);
+        pub fn profile(&self) -> CString = self.get_info_string(CL_PLATFORM_PROFILE);
+        pub fn version(&self) -> CString = self.get_info_string(CL_PLATFORM_VERSION);
+        pub fn name(&self) -> CString = self.get_info_string(CL_PLATFORM_NAME);
+        pub fn vendor(&self) -> CString = self.get_info_string(CL_PLATFORM_VENDOR);
+        pub fn extensions(&self) -> CString = self.get_info_string(CL_PLATFORM_EXTENSIONS);
+        pub fn host_timer_resolution(&self) -> cl_ulong = self.get_info_ulong(CL_PLATFORM_HOST_TIMER_RESOLUTION);
     }
 }
