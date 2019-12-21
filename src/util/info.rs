@@ -1,5 +1,5 @@
 use crate::raw::{cl_uint, cl_ulong, CL_FALSE};
-use crate::Result;
+use crate::{Error, Result};
 use libc::size_t;
 use std::convert::TryInto;
 use std::ffi::CString;
@@ -96,39 +96,50 @@ pub trait OclInfo: sealed::OclInfoInternal {
 
 impl<T: sealed::OclInfoInternal> OclInfo for T {}
 
-pub(crate) trait OclInfoFrom<T>: Sized {
-    fn convert(value: T) -> Result<Self>;
+pub(crate) trait OclInfoFrom<T: ?Sized>: Sized {
+    fn convert(value: &T) -> Result<Self>;
 }
 
-impl<T: Sized> OclInfoFrom<T> for T {
-    fn convert(value: T) -> Result<Self> {
-        Ok(value)
-    }
-}
-
-impl OclInfoFrom<Vec<u8>> for Vec<size_t> {
-    fn convert(value: Vec<u8>) -> Result<Self> {
-        assert_eq!(
-            value.len() % size_of::<size_t>(),
-            0,
-            "expected data length to be a multiple of {}",
-            size_of::<size_t>()
-        );
-
-        Ok(value
-            .chunks_exact(size_of::<size_t>())
-            .map(|v| size_t::from_ne_bytes(v.try_into().unwrap()))
-            .collect())
+impl<T: Sized + Clone> OclInfoFrom<T> for T {
+    fn convert(value: &T) -> Result<Self> {
+        Ok(value.clone())
     }
 }
 
 impl<T> OclInfoFrom<size_t> for *mut T {
-    fn convert(value: usize) -> Result<Self> {
+    fn convert(&value: &usize) -> Result<Self> {
         Ok(value as _)
     }
 }
 
-pub(crate) fn info_convert<F, T>(value: F) -> Result<T>
+impl<T> OclInfoFrom<[u8]> for *mut T {
+    fn convert(value: &[u8]) -> Result<Self> {
+        <*mut T>::convert(&size_t::convert(value)?)
+    }
+}
+
+impl OclInfoFrom<[u8]> for size_t {
+    fn convert(value: &[u8]) -> Result<Self> {
+        Ok(size_t::from_ne_bytes(value.try_into().map_err(|_| {
+            Error::InvalidDataLength {
+                expected: size_of::<size_t>(),
+                actual: value.len(),
+            }
+        })?))
+    }
+}
+
+impl<T: Sized + OclInfoFrom<[u8]>> OclInfoFrom<Vec<u8>> for Vec<T> {
+    fn convert(value: &Vec<u8>) -> Result<Self> {
+        let mut values = vec![];
+        for chunk in value.chunks(size_of::<T>()) {
+            values.push(T::convert(chunk)?);
+        }
+        Ok(values)
+    }
+}
+
+pub(crate) fn info_convert<F, T>(value: &F) -> Result<T>
 where
     T: OclInfoFrom<F>,
 {

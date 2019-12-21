@@ -1,8 +1,12 @@
 mod types;
 
+use crate::context::Context;
 use crate::platform::Platform;
 use crate::queue::QueueProperties;
-use crate::raw::{cl_device_id, cl_device_info, cl_platform_id, cl_uint, cl_ulong};
+use crate::raw::{
+    cl_context_properties, cl_device_id, cl_device_info, cl_platform_id, cl_uint, cl_ulong,
+    CL_CONTEXT_PLATFORM, CL_SUCCESS,
+};
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use libc::size_t;
@@ -10,6 +14,7 @@ use std::ffi::CString;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
 use std::os::raw::c_void;
+use std::ptr::null_mut;
 pub use types::*;
 
 /// An OpenCL device
@@ -61,6 +66,28 @@ impl OclInfoInternal for Device {
 }
 
 impl Device {
+    /// Create a new context containing only this device, with no custom
+    /// properties set.
+    pub fn create_context(&self) -> Result<Context> {
+        unsafe {
+            let mut props = [CL_CONTEXT_PLATFORM, self.platform_id()? as _, 0];
+            let mut err = CL_SUCCESS;
+            let id = self.ocl.raw().CL10.clCreateContext(
+                props.as_mut_ptr(),
+                1,
+                &self.id as *const _,
+                None,
+                null_mut(),
+                &mut err as _,
+            );
+            ocl_try!("clCreateContext" => err);
+            Ok(Context {
+                id,
+                ocl: self.ocl.clone(),
+            })
+        }
+    }
+
     info_funcs! {
         pub fn device_type(&self) -> DeviceType = self.get_info_ulong(CL_DEVICE_TYPE);
         pub fn device_vendor_id(&self) -> cl_uint = self.get_info_uint(CL_DEVICE_VENDOR_ID);

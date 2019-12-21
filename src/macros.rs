@@ -87,7 +87,7 @@ macro_rules! info_funcs {
             $( #[ $outer ] )*
             pub fn $name(&self) -> crate::Result<$ret> {
                 <Self as crate::util::OclInfo>::$delegate(self, crate::raw::$param)
-                    .and_then(crate::util::info_convert)
+                    .and_then(|v| crate::util::info_convert(&v))
             }
         )*
 
@@ -208,7 +208,7 @@ macro_rules! bitfield {
         }
 
         impl crate::util::OclInfoFrom<$typ> for $name {
-            fn convert(value: $typ) -> crate::Result<Self> {
+            fn convert(&value: &$typ) -> crate::Result<Self> {
                 Ok(Self(value))
             }
         }
@@ -249,7 +249,7 @@ macro_rules! flag_enum {
         }
 
         impl crate::util::OclInfoFrom<$typ> for $name {
-            fn convert(value: $typ) -> crate::Result<Self> {
+            fn convert(&value: &$typ) -> crate::Result<Self> {
                 Self::from_raw(value)
                     .ok_or_else(|| crate::Error::InvalidFlag { value, context: stringify!($name) })
             }

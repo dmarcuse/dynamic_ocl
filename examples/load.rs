@@ -12,6 +12,10 @@ pub fn main() {
 
         for device in platform.get_devices(DeviceType::ALL).unwrap() {
             println!("Got device: {:#?}", device);
+
+            let ctx = device.create_context().unwrap();
+
+            println!("Created context: {:#?}", ctx);
         }
     }
 }

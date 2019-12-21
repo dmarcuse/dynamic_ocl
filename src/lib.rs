@@ -70,6 +70,7 @@ mod lib {
     }
 }
 
+pub mod context;
 pub mod device;
 mod error;
 pub mod platform;

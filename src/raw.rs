@@ -335,10 +335,10 @@ pub const CL_QUEUE_PROFILING_ENABLE: cl_device_exec_capabilities = (1 << 1);
 pub const CL_QUEUE_ON_DEVICE: cl_device_exec_capabilities = (1 << 2);
 pub const CL_QUEUE_ON_DEVICE_DEFAULT: cl_device_exec_capabilities = (1 << 3);
 
-pub const CL_CONTEXT_REFERENCE_COUNT: cl_command_queue_properties = 0x1080;
-pub const CL_CONTEXT_DEVICES: cl_command_queue_properties = 0x1081;
-pub const CL_CONTEXT_PROPERTIES: cl_command_queue_properties = 0x1082;
-pub const CL_CONTEXT_NUM_DEVICES: cl_command_queue_properties = 0x1083;
+pub const CL_CONTEXT_REFERENCE_COUNT: cl_context_info = 0x1080;
+pub const CL_CONTEXT_DEVICES: cl_context_info = 0x1081;
+pub const CL_CONTEXT_PROPERTIES: cl_context_info = 0x1082;
+pub const CL_CONTEXT_NUM_DEVICES: cl_context_info = 0x1083;
 
 pub const CL_CONTEXT_PLATFORM: cl_context_properties = 0x1084;
 pub const CL_CONTEXT_INTEROP_USER_SYNC: cl_context_properties = 0x1085;

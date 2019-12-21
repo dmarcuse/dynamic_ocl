@@ -36,14 +36,20 @@ impl Display for ApiError {
 
 #[derive(thiserror::Error)]
 pub enum Error {
+    /// Error that occurred within an OpenCL API call
     #[error("{0}")]
     ApiError(#[from] ApiError),
 
+    /// Error converting a flag value to a Rust enum
     #[error("Invalid flag value {value:x} for type {context}")]
     InvalidFlag {
         value: cl_uint,
         context: &'static str,
     },
+
+    /// Data length mismatch
+    #[error("Expected data length of {expected}, got data length {actual}")]
+    InvalidDataLength { expected: usize, actual: usize },
 }
 
 impl Debug for Error {
