@@ -4,7 +4,7 @@ use crate::context::Context;
 use crate::platform::Platform;
 use crate::queue::QueueProperties;
 use crate::raw::{
-    cl_context_properties, cl_device_id, cl_device_info, cl_platform_id, cl_uint, cl_ulong,
+    cl_device_id, cl_device_info, cl_platform_id, cl_uint, cl_ulong,
     CL_CONTEXT_PLATFORM, CL_SUCCESS,
 };
 use crate::util::sealed::OclInfoInternal;
