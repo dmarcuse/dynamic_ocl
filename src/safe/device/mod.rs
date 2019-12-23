@@ -138,7 +138,7 @@ impl Device {
         pub fn max_on_device_queues(&self) -> cl_uint = CL_DEVICE_MAX_ON_DEVICE_QUEUES;
         pub fn max_on_device_events(&self) -> cl_uint = CL_DEVICE_MAX_ON_DEVICE_EVENTS;
         pub fn built_in_kernels(&self) -> CString = CL_DEVICE_BUILT_IN_KERNELS;
-        pub fn platform_id(&self) -> cl_platform_id = CL_DEVICE_PLATFORM;
+        pub fn platform_raw(&self) -> cl_platform_id = CL_DEVICE_PLATFORM;
         pub fn name(&self) -> CString = CL_DEVICE_NAME;
         pub fn vendor(&self) -> CString = CL_DEVICE_VENDOR;
         pub fn driver_version(&self) -> CString = CL_DRIVER_VERSION;
@@ -148,7 +148,7 @@ impl Device {
         pub fn extensions(&self) -> CString = CL_DEVICE_EXTENSIONS;
         pub fn printf_buffer_size(&self) -> size_t = CL_DEVICE_PRINTF_BUFFER_SIZE;
         pub fn preferred_interop_user_sync(&self) -> bool = CL_DEVICE_PREFERRED_INTEROP_USER_SYNC;
-        pub fn parent_device_id(&self) -> cl_device_id = CL_DEVICE_PARENT_DEVICE;
+        pub fn parent_device_raw(&self) -> cl_device_id = CL_DEVICE_PARENT_DEVICE;
         pub fn partition_max_sub_devices(&self) -> cl_uint = CL_DEVICE_PARTITION_MAX_SUB_DEVICES;
         // TODO: CL_DEVICE_PARTITION_PROPERTIES
         pub fn partition_affinity_domain(&self) -> AffinityDomain = CL_DEVICE_PARTITION_AFFINITY_DOMAIN;
@@ -163,11 +163,11 @@ impl Device {
     }
 
     pub fn platform(&self) -> Result<Platform> {
-        self.platform_id().map(Platform)
+        self.platform_raw().map(Platform)
     }
 
     pub fn parent_device(&self) -> Result<Option<Device>> {
-        self.parent_device_id()
+        self.parent_device_raw()
             .map(|id| if id.is_null() { None } else { Some(Device(id)) })
     }
 }

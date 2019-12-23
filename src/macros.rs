@@ -135,7 +135,7 @@ macro_rules! raw_functions {
             r
         }
 
-        pub mod load_stubs {
+        mod load_stubs {
             use super::*;
 
             $(
@@ -149,7 +149,7 @@ macro_rules! raw_functions {
         }
 
         #[allow(unused_variables)]
-        pub mod missing_stubs {
+        mod missing_stubs {
             use super::*;
 
             $(
@@ -173,6 +173,8 @@ macro_rules! raw_functions {
     }
 }
 
+/// Wrap an OpenCL error code in a result
+#[cfg(feature = "safe")]
 macro_rules! wrap_result {
     ( $ctx:expr => $e:expr ) => {
         match $e {
@@ -182,6 +184,8 @@ macro_rules! wrap_result {
     };
 }
 
+/// Define OpenCL info functions
+#[cfg(feature = "safe")]
 macro_rules! info_funcs {
     (
         $(
@@ -212,6 +216,8 @@ macro_rules! info_funcs {
     }
 }
 
+/// Define a wrapper for an OpenCL bitfield type
+#[cfg(feature = "safe")]
 macro_rules! bitfield {
     (
         $( #[ $outer:meta ] )*
@@ -320,6 +326,8 @@ macro_rules! bitfield {
     };
 }
 
+/// Define a wrapper for an OpenCL flag type, with a fixed set of valid values
+#[cfg(feature = "safe")]
 macro_rules! flag_enum {
     (
         $( #[ $outer:meta ] )*

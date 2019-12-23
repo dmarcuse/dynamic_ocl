@@ -1,4 +1,11 @@
-//! Raw, unsafe bindings to OpenCL C API, with minimal extras
+//! Raw, unsafe bindings to OpenCL C API, with minimal extras.
+//!
+//! This module consists of types, constants, and functions defined in the
+//! OpenCL headers. To avoid a hard dependency on OpenCL, this module does not
+//! link against OpenCL at compile time, and instead has function shims that are
+//! replaced by dynamically-loaded symbols at runtime after calling
+//! `load_opencl` in the library root. The function shims will also implicitly
+//! call `load_opencl` for convenience.
 
 #![allow(
     non_camel_case_types,

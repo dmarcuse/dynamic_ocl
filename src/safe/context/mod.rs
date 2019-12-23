@@ -63,11 +63,11 @@ impl Context {
     info_funcs! {
         pub fn reference_count(&self) -> cl_uint = CL_CONTEXT_REFERENCE_COUNT;
         pub fn num_devices(&self) -> cl_uint = CL_CONTEXT_NUM_DEVICES;
-        pub fn device_ids(&self) -> Vec<cl_device_id> = CL_CONTEXT_DEVICES;
+        pub fn devices_raw(&self) -> Vec<cl_device_id> = CL_CONTEXT_DEVICES;
         // TODO: CL_CONTEXT_PROPERTIES
     }
 
     pub fn devices(&self) -> Result<Vec<Device>> {
-        Ok(self.device_ids()?.into_iter().map(Device).collect())
+        Ok(self.devices_raw()?.into_iter().map(Device).collect())
     }
 }
