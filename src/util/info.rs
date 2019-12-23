@@ -44,21 +44,21 @@ pub trait OclInfo: sealed::OclInfoInternal {
         unsafe {
             let mut size = 0;
 
-            ocl_try!(Self::DEBUG_CONTEXT => self.raw_info_internal(
+            wrap_result!(Self::DEBUG_CONTEXT => self.raw_info_internal(
                 param_name,
                 0,
                 null_mut(),
                 &mut size as _
-            ));
+            ))?;
 
             let mut data = vec![0u8; size as usize];
 
-            ocl_try!(Self::DEBUG_CONTEXT => self.raw_info_internal(
+            wrap_result!(Self::DEBUG_CONTEXT => self.raw_info_internal(
                 param_name,
                 size,
                 data.as_mut_ptr() as *mut _,
                 &mut size as _
-            ));
+            ))?;
 
             if data.len() != size {
                 return Err(Error::InvalidDataLength {
@@ -87,12 +87,12 @@ pub trait OclInfo: sealed::OclInfoInternal {
             let mut array = GenericArray::default();
             let mut size_ret = 0;
 
-            ocl_try!(Self::DEBUG_CONTEXT => self.raw_info_internal(
+            wrap_result!(Self::DEBUG_CONTEXT => self.raw_info_internal(
                 param_name,
                 L::USIZE,
                 array.as_mut_ptr() as _,
                 &mut size_ret as _
-            ));
+            ))?;
 
             if L::USIZE != size_ret {
                 return Err(Error::InvalidDataLength {
@@ -106,6 +106,10 @@ pub trait OclInfo: sealed::OclInfoInternal {
     }
 
     /// Get information about this object from OpenCL.
+    ///
+    /// This function will automatically convert the data to the type specified
+    /// by the type parameter, but it's up to the programmer to ensure that this
+    /// is the appropriate type for the given parameter.
     fn get_info<T: FromOclInfo>(&self, param_name: Self::Param) -> Result<T>
     where
         Self: Sized,

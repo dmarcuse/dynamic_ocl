@@ -1,7 +1,10 @@
 mod types;
 
 use crate::device::Device;
-use crate::raw::{clGetContextInfo, cl_context, cl_context_info, cl_device_id, cl_uint};
+use crate::raw::{
+    clGetContextInfo, clReleaseContext, clRetainContext, cl_context, cl_context_info, cl_device_id,
+    cl_uint,
+};
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use std::fmt::{self, Debug, Formatter};
@@ -11,6 +14,16 @@ pub use types::*;
 /// An OpenCL context
 #[derive(PartialEq, Eq, Hash)]
 pub struct Context(pub(crate) cl_context);
+
+impl Drop for Context {
+    fn drop(&mut self) {
+        unsafe {
+            if let Err(e) = wrap_result!("clReleaseContext" => clReleaseContext(self.0)) {
+                log::warn!("Error releasing OpenCL context {:?}: {:?}", self, e);
+            }
+        }
+    }
+}
 
 impl Debug for Context {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
@@ -40,6 +53,13 @@ impl OclInfoInternal for Context {
 }
 
 impl Context {
+    pub fn try_clone(&self) -> Result<Self> {
+        unsafe {
+            wrap_result!("clRetainContext" => clRetainContext(self.0))?;
+            Ok(Self(self.0))
+        }
+    }
+
     info_funcs! {
         pub fn reference_count(&self) -> cl_uint = CL_CONTEXT_REFERENCE_COUNT;
         pub fn num_devices(&self) -> cl_uint = CL_CONTEXT_NUM_DEVICES;

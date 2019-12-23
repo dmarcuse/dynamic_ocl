@@ -64,7 +64,7 @@ impl Device {
                 null_mut(),
                 &mut err as _,
             );
-            ocl_try!("clCreateContext" => err);
+            wrap_result!("clCreateContext" => err)?;
             Ok(Context(id))
         }
     }

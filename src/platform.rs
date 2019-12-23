@@ -43,25 +43,23 @@ impl OclInfoInternal for Platform {
 
 impl Platform {
     /// Get a list of OpenCL platforms available on this system.
-    ///
-    /// This call requires OpenCL 1.0+.
     pub fn get_platforms() -> Result<Vec<Platform>> {
         unsafe {
             let mut num_platforms = 0u32;
 
-            ocl_try!("clGetPlatformIDs" => clGetPlatformIDs(
+            wrap_result!("clGetPlatformIDs" => clGetPlatformIDs(
                 0,
                 null_mut(),
                 &mut num_platforms as _
-            ));
+            ))?;
 
             let mut ids = vec![null_mut(); num_platforms as usize];
 
-            ocl_try!("clGetPlatformIDs" => clGetPlatformIDs(
+            wrap_result!("clGetPlatformIDs" => clGetPlatformIDs(
                 num_platforms,
                 ids.as_mut_ptr(),
                 &mut num_platforms as _,
-            ));
+            ))?;
 
             Ok(ids.into_iter().map(Platform).collect())
         }
@@ -71,23 +69,23 @@ impl Platform {
         unsafe {
             let mut num_devices = 0u32;
 
-            ocl_try!("clGetDeviceIDs" => clGetDeviceIDs(
+            wrap_result!("clGetDeviceIDs" => clGetDeviceIDs(
                 self.0,
                 typ.raw(),
                 0,
                 null_mut(),
                 &mut num_devices as _
-            ));
+            ))?;
 
             let mut ids = vec![null_mut(); num_devices as usize];
 
-            ocl_try!("clGetDeviceIDs" => clGetDeviceIDs(
+            wrap_result!("clGetDeviceIDs" => clGetDeviceIDs(
                 self.0,
                 typ.raw(),
                 num_devices,
                 ids.as_mut_ptr(),
                 &mut num_devices as _,
-            ));
+            ))?;
 
             Ok(ids.into_iter().map(Device).collect())
         }

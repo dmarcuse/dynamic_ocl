@@ -173,11 +173,11 @@ macro_rules! raw_functions {
     }
 }
 
-macro_rules! ocl_try {
+macro_rules! wrap_result {
     ( $ctx:expr => $e:expr ) => {
         match $e {
-            crate::raw::CL_SUCCESS => {}
-            e => return Err(crate::ApiError::new(e, $ctx).into()),
+            crate::raw::CL_SUCCESS => Ok(()),
+            e => Err(crate::ApiError::new(e, $ctx)),
         }
     };
 }
