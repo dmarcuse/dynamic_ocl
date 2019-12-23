@@ -1,70 +1,22 @@
 use crate::device::{Device, DeviceType};
-use crate::raw::{cl_platform_id, cl_platform_info, cl_ulong};
+use crate::raw::{
+    clGetDeviceIDs, clGetPlatformIDs, clGetPlatformInfo, cl_platform_id, cl_platform_info, cl_ulong,
+};
 use crate::util::sealed::OclInfoInternal;
-use crate::{OpenCL, Result};
+use crate::Result;
 use std::ffi::c_void;
 use std::ffi::CString;
 use std::fmt::{self, Debug, Formatter};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::ptr::null_mut;
 
 /// An OpenCL platform
-#[derive(Clone)]
-pub struct Platform {
-    pub(crate) ocl: crate::OpenCL,
-    pub(crate) id: cl_platform_id,
-}
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Platform(pub(crate) cl_platform_id);
 
 impl Debug for Platform {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.info_fmt(f)
-    }
-}
-
-impl PartialEq for Platform {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl Eq for Platform {}
-
-impl Hash for Platform {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_usize(self.id as usize)
-    }
-}
-
-impl OpenCL {
-    /// Get a list of OpenCL platforms available on this system.
-    ///
-    /// This call requires OpenCL 1.0+.
-    pub fn get_platforms(&self) -> Result<Vec<Platform>> {
-        unsafe {
-            let mut num_platforms = 0u32;
-
-            ocl_try!("clGetPlatformIDs" => self.raw().CL10.clGetPlatformIDs(
-                0,
-                null_mut(),
-                &mut num_platforms as _
-            ));
-
-            let mut ids = vec![null_mut(); num_platforms as usize];
-
-            ocl_try!("clGetPlatformIDs" => self.raw().CL10.clGetPlatformIDs(
-                num_platforms,
-                ids.as_mut_ptr(),
-                &mut num_platforms as _,
-            ));
-
-            Ok(ids
-                .into_iter()
-                .map(|id| Platform {
-                    id,
-                    ocl: self.clone(),
-                })
-                .collect())
-        }
     }
 }
 
@@ -79,8 +31,8 @@ impl OclInfoInternal for Platform {
         param_value: *mut c_void,
         param_value_size_ret: *mut usize,
     ) -> i32 {
-        self.ocl.raw().CL10.clGetPlatformInfo(
-            self.id,
+        clGetPlatformInfo(
+            self.0,
             param_name,
             param_value_size,
             param_value,
@@ -90,12 +42,37 @@ impl OclInfoInternal for Platform {
 }
 
 impl Platform {
-    pub fn get_devices(&self, typ: DeviceType) -> Result<Vec<Device>> {
+    /// Get a list of OpenCL platforms available on this system.
+    ///
+    /// This call requires OpenCL 1.0+.
+    pub fn get_platforms() -> Result<Vec<Platform>> {
+        unsafe {
+            let mut num_platforms = 0u32;
+
+            ocl_try!("clGetPlatformIDs" => clGetPlatformIDs(
+                0,
+                null_mut(),
+                &mut num_platforms as _
+            ));
+
+            let mut ids = vec![null_mut(); num_platforms as usize];
+
+            ocl_try!("clGetPlatformIDs" => clGetPlatformIDs(
+                num_platforms,
+                ids.as_mut_ptr(),
+                &mut num_platforms as _,
+            ));
+
+            Ok(ids.into_iter().map(Platform).collect())
+        }
+    }
+
+    pub fn get_devices(self, typ: DeviceType) -> Result<Vec<Device>> {
         unsafe {
             let mut num_devices = 0u32;
 
-            ocl_try!("clGetDeviceIDs" => self.ocl.raw().CL10.clGetDeviceIDs(
-                self.id,
+            ocl_try!("clGetDeviceIDs" => clGetDeviceIDs(
+                self.0,
                 typ.raw(),
                 0,
                 null_mut(),
@@ -104,21 +81,15 @@ impl Platform {
 
             let mut ids = vec![null_mut(); num_devices as usize];
 
-            ocl_try!("clGetDeviceIDs" => self.ocl.raw().CL10.clGetDeviceIDs(
-                self.id,
+            ocl_try!("clGetDeviceIDs" => clGetDeviceIDs(
+                self.0,
                 typ.raw(),
                 num_devices,
                 ids.as_mut_ptr(),
                 &mut num_devices as _,
             ));
 
-            Ok(ids
-                .into_iter()
-                .map(|id| Device {
-                    id,
-                    ocl: self.ocl.clone(),
-                })
-                .collect())
+            Ok(ids.into_iter().map(Device).collect())
         }
     }
 

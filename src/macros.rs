@@ -33,36 +33,118 @@ macro_rules! error_codes {
 macro_rules! raw_functions {
     (
         $(
-             $apiname:ident : $apity:ty {
+             $apiname:ident {
                 $(
                     fn $fname:ident ( $( $pname:ident : $pty:ty ),* $(,)? ) $( -> $rty:ty )? ;
                 )*
             }
         )*
     ) => {
-        use dlopen_derive::{WrapperApi, WrapperMultiApi};
-        use dlopen::wrapper::{WrapperApi, WrapperMultiApi};
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub enum OpenCLVersion {
+            None,
+            $(
+                $apiname
+            ),*
+        }
 
-        $(
-            #[derive(WrapperApi)]
-            pub struct $apiname {
+        lazy_static::lazy_static! {
+            pub static ref OPENCL_LIB: std::sync::Mutex<Option<Result<OpenCLVersion, &'static dlopen::Error>>> = Default::default();
+        }
+
+        static mut OPENCL_VERSION: OpenCLVersion = OpenCLVersion::None;
+
+        pub unsafe fn load_opencl_internal() -> Result<OpenCLVersion, dlopen::Error> {
+            use std::env::var_os;
+            use dlopen::utils::platform_file_name;
+            use dlopen::raw::Library;
+            use dlopen::Error;
+
+            // load library
+            // prevent dangling symbols by ensuring it's never dropped
+            let name = var_os("OPENCL_LIBRARY").unwrap_or_else(|| platform_file_name("OpenCL"));
+            let lib = std::mem::ManuallyDrop::new(Library::open(name)?);
+
+            // set OpenCL version compatibility flags
+            $(
+                let mut $apiname = true;
+            )*
+
+            // load symbols and update version compatibility flags
+            $(
                 $(
-                    $fname: unsafe extern "C" fn ( $( $pname : $pty ),* ) $( -> $rty )*
-                ),*
-            }
+                    let $fname: unsafe extern "C" fn( $( $pname : $pty ),*) $( -> $rty )* = match lib.symbol(stringify!($fname)) {
+                        Ok(addr) => addr,
+                        Err(Error::AddrNotMatchingDll(_)) => {
+                        $apiname = false;
+                            missing_stubs::$fname
+                        }
+                        Err(e) => return Err(e),
+                    };
+                )*
+            )*
 
-            impl std::fmt::Debug for $apiname {
-                fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                    f.debug_struct(stringify!($apiname))
-                        $( .field(stringify!($fname), &(self.$fname as *const ())) )*
-                        .finish()
+            // set function pointers once all symbols have been loaded
+            $(
+                $(
+                    ptrs::$fname = $fname;
+                )*
+            )*
+
+            $(
+                if $apiname {
+                    OPENCL_VERSION = OpenCLVersion::$apiname;
                 }
-            }
-        )*
+            )*
 
-        #[derive(Debug, WrapperMultiApi)]
-        pub struct RawOpenCL {
-            $( pub $apiname: $apity, )*
+            Ok(OPENCL_VERSION)
+        }
+
+        pub fn load_opencl() -> Result<OpenCLVersion, &'static dlopen::Error> {
+            let mut lock = OPENCL_LIB.lock().unwrap();
+            if let Some(r) = *lock {
+                return r;
+            }
+
+            let r = unsafe { load_opencl_internal() }.map_err(|e| Box::leak(Box::new(e)) as &_);
+            *lock = Some(r);
+            r
+        }
+
+        pub mod load_stubs {
+            use super::*;
+
+            $(
+                $(
+                    pub unsafe extern "C" fn $fname( $( $pname : $pty ),* ) $( -> $rty )* {
+                        load_opencl().expect("error implicitly loading OpenCL library");
+                        ptrs::$fname( $( $pname ),* )
+                    }
+                )*
+            )*
+        }
+
+        #[allow(unused_variables)]
+        pub mod missing_stubs {
+            use super::*;
+
+            $(
+                $(
+                    pub unsafe extern "C" fn $fname ( $( $pname : $pty ),* ) $( -> $rty )* {
+                        panic!("OpenCL library function {} requires {:?}, but loaded version is {:?}", stringify!($fname), OpenCLVersion::$apiname, OPENCL_VERSION);
+                    }
+                )*
+            )*
+        }
+
+        pub mod ptrs {
+            use super::*;
+
+            $(
+                $(
+                    pub static mut $fname: unsafe extern "C" fn ( $( $pname : $pty ),* ) $( -> $rty )* = load_stubs::$fname;
+                )*
+            )*
         }
     }
 }

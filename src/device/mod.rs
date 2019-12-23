@@ -4,43 +4,27 @@ use crate::context::Context;
 use crate::platform::Platform;
 use crate::queue::QueueProperties;
 use crate::raw::{
-    cl_device_id, cl_device_info, cl_platform_id, cl_uint, cl_ulong,
-    CL_CONTEXT_PLATFORM, CL_SUCCESS,
+    clCreateContext, clGetDeviceInfo, cl_device_id, cl_device_info, cl_platform_id, cl_uint,
+    cl_ulong, CL_CONTEXT_PLATFORM, CL_SUCCESS,
 };
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use libc::size_t;
 use std::ffi::CString;
+
 use std::fmt::{self, Debug, Formatter};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::os::raw::c_void;
 use std::ptr::null_mut;
 pub use types::*;
 
 /// An OpenCL device
-#[derive(Clone)]
-pub struct Device {
-    pub(crate) ocl: crate::OpenCL,
-    pub(crate) id: cl_device_id,
-}
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Device(pub(crate) cl_device_id);
 
 impl Debug for Device {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.info_fmt(f)
-    }
-}
-
-impl PartialEq for Device {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl Eq for Device {}
-
-impl Hash for Device {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_usize(self.id as usize)
     }
 }
 
@@ -55,8 +39,8 @@ impl OclInfoInternal for Device {
         param_value: *mut c_void,
         param_value_size_ret: *mut usize,
     ) -> i32 {
-        self.ocl.raw().CL10.clGetDeviceInfo(
-            self.id,
+        clGetDeviceInfo(
+            self.0,
             param_name,
             param_value_size,
             param_value,
@@ -70,21 +54,18 @@ impl Device {
     /// properties set.
     pub fn create_context(&self) -> Result<Context> {
         unsafe {
-            let mut props = [CL_CONTEXT_PLATFORM, self.platform_id()? as _, 0];
+            let mut props = [CL_CONTEXT_PLATFORM, self.platform()?.0 as _, 0];
             let mut err = CL_SUCCESS;
-            let id = self.ocl.raw().CL10.clCreateContext(
+            let id = clCreateContext(
                 props.as_mut_ptr(),
                 1,
-                &self.id as *const _,
+                &self.0 as *const _,
                 None,
                 null_mut(),
                 &mut err as _,
             );
             ocl_try!("clCreateContext" => err);
-            Ok(Context {
-                id,
-                ocl: self.ocl.clone(),
-            })
+            Ok(Context(id))
         }
     }
 
@@ -182,22 +163,11 @@ impl Device {
     }
 
     pub fn platform(&self) -> Result<Platform> {
-        self.platform_id().map(|id| Platform {
-            id,
-            ocl: self.ocl.clone(),
-        })
+        self.platform_id().map(Platform)
     }
 
     pub fn parent_device(&self) -> Result<Option<Device>> {
-        self.parent_device_id().map(|id| {
-            if id.is_null() {
-                None
-            } else {
-                Some(Device {
-                    id,
-                    ocl: self.ocl.clone(),
-                })
-            }
-        })
+        self.parent_device_id()
+            .map(|id| if id.is_null() { None } else { Some(Device(id)) })
     }
 }
