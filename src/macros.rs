@@ -33,7 +33,7 @@ macro_rules! error_codes {
 macro_rules! raw_functions {
     (
         $(
-             $apiname:ident {
+             $apiname:ident = $apinamehuman:expr => {
                 $(
                     fn $fname:ident ( $( $pname:ident : $pty:ty ),* $(,)? ) $( -> $rty:ty )? ;
                 )*
@@ -46,6 +46,19 @@ macro_rules! raw_functions {
             $(
                 $apiname
             ),*
+        }
+
+        impl std::fmt::Display for OpenCLVersion {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                let s = match self {
+                    OpenCLVersion::None => "No OpenCL support",
+                    $(
+                        OpenCLVersion::$apiname => $apinamehuman,
+                    )*
+                };
+
+                write!(f, "{}", s)
+            }
         }
 
         lazy_static::lazy_static! {
@@ -75,7 +88,7 @@ macro_rules! raw_functions {
                 $(
                     let $fname: unsafe extern "C" fn( $( $pname : $pty ),*) $( -> $rty )* = match lib.symbol(stringify!($fname)) {
                         Ok(addr) => addr,
-                        Err(Error::AddrNotMatchingDll(_)) => {
+                        Err(Error::SymbolGettingError(_)) => {
                         $apiname = false;
                             missing_stubs::$fname
                         }
@@ -131,7 +144,7 @@ macro_rules! raw_functions {
             $(
                 $(
                     pub unsafe extern "C" fn $fname ( $( $pname : $pty ),* ) $( -> $rty )* {
-                        panic!("OpenCL library function {} requires {:?}, but loaded version is {:?}", stringify!($fname), OpenCLVersion::$apiname, OPENCL_VERSION);
+                        panic!("OpenCL library function {} requires {}, but loaded version is {}", stringify!($fname), OpenCLVersion::$apiname, OPENCL_VERSION);
                     }
                 )*
             )*

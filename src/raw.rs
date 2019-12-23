@@ -614,7 +614,7 @@ pub(crate) mod functions {
     use std::ffi::c_void;
 
     raw_functions! {
-        CL10 {
+        CL10 = "OpenCL 1.0" => {
             fn clGetPlatformIDs(num_entries: cl_uint, platforms: *mut cl_platform_id, num_platforms: *mut cl_uint) -> cl_int;
             fn clGetPlatformInfo(platform: cl_platform_id, param_name: cl_platform_info, param_value_size: size_t, param_value: *mut c_void, param_value_size_ret: *mut size_t) -> cl_int;
 
@@ -697,7 +697,7 @@ pub(crate) mod functions {
             fn clGetExtensionFunctionAddress(func_name: *const c_char) -> *mut c_void;
         }
 
-        CL11 {
+        CL11 = "OpenCL 1.1" => {
             fn clCreateSubBuffer(buffer: cl_mem, flags: cl_mem_flags, buffer_create_type: cl_buffer_create_type, buffer_create_info: *const c_void, errcode_ret: *mut cl_int) -> cl_mem;
             fn clSetMemObjectDestructorCallback(memobj: cl_mem, pfn_notify: extern "C" fn(memobj: cl_mem, user_data: *mut c_void), user_data: *mut c_void) -> cl_int;
 
@@ -710,7 +710,7 @@ pub(crate) mod functions {
             fn clEnqueueCopyBufferRect(command_queue: cl_command_queue, src_buffer: cl_mem, dst_buffer: cl_mem, src_origin: *const size_t, dst_origin: *const size_t, region: *const size_t, src_row_pitch: size_t, src_slice_pitch: size_t, dst_row_pitch: size_t, dst_slice_pitch: size_t, num_events_in_wait_list: cl_uint, event_wait_list: *const cl_event, event: *mut cl_event) -> cl_int;
         }
 
-        CL12 {
+        CL12 = "OpenCL 1.2" => {
             fn clCreateSubDevices(in_device: cl_device_id, properties: *const cl_device_partition_property, num_devices: cl_uint, out_devices: *mut cl_device_id, num_devices_ret: *mut cl_uint) -> cl_int;
             fn clRetainDevice(device: cl_device_id) -> cl_int;
             fn clReleaseDevice(device: cl_device_id) -> cl_int;
@@ -734,7 +734,7 @@ pub(crate) mod functions {
             fn clGetExtensionFunctionAddressForPlatform(platform: cl_platform_id, func_name: *const c_char) -> *mut c_void;
         }
 
-        CL20 {
+        CL20 = "OpenCL 2.0" => {
             fn clCreateCommandQueueWithProperties(context: cl_context, device: cl_device_id, properties: *const cl_queue_properties, errcode_ret: *mut cl_int) -> cl_command_queue;
 
             fn clCreatePipe(context: cl_context, flags: cl_mem_flags, pipe_packet_size: cl_uint, pipe_max_packets: cl_uint, properties: *const cl_pipe_properties, errcode_ret: *mut cl_int) -> cl_mem;
@@ -755,7 +755,7 @@ pub(crate) mod functions {
             fn clEnqueueSVMUnmap(command_queue: cl_command_queue, svm_ptr: *mut c_void, num_events_in_wait_list: cl_uint, event_wait_list: *const cl_event, event: *mut cl_event) -> cl_int;
         }
 
-        CL21 {
+        CL21 = "OpenCL 2.1" => {
             fn clSetDefaultDeviceCommandQueue(context: cl_context, device: cl_device_id, command_queue: cl_command_queue) -> cl_int;
             fn clGetDeviceAndHostTimer(device: cl_device_id, device_timestamp: *mut cl_ulong, host_timestamp: *mut cl_ulong) -> cl_int;
             fn clGetHostTimer(device: cl_device_id, host_timestamp: *mut cl_ulong) -> cl_int;
@@ -768,7 +768,7 @@ pub(crate) mod functions {
             fn clEnqueueSVMMigrateMem(command_queue: cl_command_queue, num_svm_pointers: cl_uint, svm_pointers: *const *mut c_void, sizes: *const size_t, flags: cl_mem_migration_flags, num_events_in_wait_list: cl_uint, event_wait_list: *const cl_event, event: *mut cl_event) -> cl_int;
         }
 
-        CL22 {
+        CL22 = "OpenCL 2.2" => {
             fn clSetProgramReleaseCallback(program: cl_program, pfn_notify: extern "C" fn(program: cl_program, user_data: *mut c_void), user_data: *mut c_void) -> cl_int;
             fn clSetProgramSpecializationConstant(program: cl_program, spec_id: cl_uint, spec_size: size_t, spec_value: *const c_void) -> cl_int;
         }
