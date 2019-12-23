@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 libc = "0.2.66"
 dlopen = "0.1.8"
-dlopen_derive = "0.1.4"
 thiserror = "1.0.9"
-log = "0.4.8"
 lazy_static = "1.4.0"
+const-cstr = "0.3.0"

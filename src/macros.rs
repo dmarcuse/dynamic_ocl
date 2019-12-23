@@ -67,6 +67,17 @@ macro_rules! raw_functions {
 
         static mut OPENCL_VERSION: OpenCLVersion = OpenCLVersion::None;
 
+        mod fnames {
+            use const_cstr::const_cstr;
+            const_cstr! {
+                $(
+                    $(
+                        pub $fname = stringify!($fname);
+                    )*
+                )*
+            }
+        }
+
         pub unsafe fn load_opencl_internal() -> Result<OpenCLVersion, dlopen::Error> {
             use std::env::var_os;
             use dlopen::utils::platform_file_name;
@@ -86,7 +97,7 @@ macro_rules! raw_functions {
             // load symbols and update version compatibility flags
             $(
                 $(
-                    let $fname: unsafe extern "C" fn( $( $pname : $pty ),*) $( -> $rty )* = match lib.symbol(stringify!($fname)) {
+                    let $fname: unsafe extern "C" fn( $( $pname : $pty ),*) $( -> $rty )* = match lib.symbol_cstr(fnames::$fname.as_cstr()) {
                         Ok(addr) => addr,
                         Err(Error::SymbolGettingError(_)) => {
                         $apiname = false;
