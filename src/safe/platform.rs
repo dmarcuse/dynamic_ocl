@@ -91,6 +91,21 @@ impl Platform {
         }
     }
 
+    /// Get the raw handle for this platform
+    pub fn raw(self) -> cl_platform_id {
+        self.0
+    }
+
+    /// Wrap the given raw platform handle
+    ///
+    /// # Safety
+    ///
+    /// If the given handle is not a valid OpenCL platform ID, behavior is
+    /// undefined.
+    pub unsafe fn from_raw(handle: cl_platform_id) -> Self {
+        Self(handle)
+    }
+
     info_funcs! {
         pub fn profile(&self) -> CString = CL_PLATFORM_PROFILE;
         pub fn version(&self) -> CString = CL_PLATFORM_VERSION;

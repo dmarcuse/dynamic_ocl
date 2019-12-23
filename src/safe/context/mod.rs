@@ -53,11 +53,32 @@ impl OclInfoInternal for Context {
 }
 
 impl Context {
+    /// Attempt to clone this context, using `clRetainContext` to ensure the
+    /// context is not released while a wrapper still exists.
     pub fn try_clone(&self) -> Result<Self> {
         unsafe {
             wrap_result!("clRetainContext" => clRetainContext(self.0))?;
             Ok(Self(self.0))
         }
+    }
+
+    /// Get the raw handle for this context. Note that this handle is only a raw
+    /// pointer and does not use RAII to ensure validity, so you must manually
+    /// make sure that it's not released while still in use.
+    pub fn raw(&self) -> cl_context {
+        self.0
+    }
+
+    /// Wrap the given raw context handle
+    ///
+    /// # Safety
+    ///
+    /// If the given handle is not a valid OpenCL context, behavior is
+    /// undefined. Additionally, the reference count must stay above zero until
+    /// the wrapper is dropped (which will implicitly release the handle and
+    /// decrement the reference count).
+    pub unsafe fn from_raw(handle: cl_context) -> Self {
+        Self(handle)
     }
 
     info_funcs! {

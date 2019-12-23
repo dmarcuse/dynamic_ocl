@@ -19,7 +19,7 @@ use std::ptr::null_mut;
 pub use types::*;
 
 /// An OpenCL device
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Device(pub(crate) cl_device_id);
 
 impl Debug for Device {
@@ -67,6 +67,21 @@ impl Device {
             wrap_result!("clCreateContext" => err)?;
             Ok(Context(id))
         }
+    }
+
+    /// Get the raw handle for this device
+    pub fn raw(self) -> cl_device_id {
+        self.0
+    }
+
+    /// Wrap the given raw device handle
+    ///
+    /// # Safety
+    ///
+    /// If the given handle is not a valid OpenCL device ID, behavior is
+    /// undefined.
+    pub unsafe fn from_raw(handle: cl_device_id) -> Self {
+        Self(handle)
     }
 
     info_funcs! {

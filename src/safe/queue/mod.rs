@@ -59,6 +59,25 @@ impl Queue {
         }
     }
 
+    /// Get the raw handle for this queue. Note that this handle is only a raw
+    /// pointer and does not use RAII to ensure validity, so you must manually
+    /// make sure that it's not released while still in use.
+    pub fn raw(&self) -> cl_command_queue {
+        self.0
+    }
+
+    /// Wrap the given raw command queue handle
+    ///
+    /// # Safety
+    ///
+    /// If the given handle is not a valid OpenCL queue, behavior is undefined.
+    /// Additionally, the reference count must stay above zero until the wrapper
+    /// is dropped (which will implicitly release the handle and decrement the
+    /// reference count).
+    pub unsafe fn from_raw(handle: cl_command_queue) -> Self {
+        Self(handle)
+    }
+
     info_funcs! {
         pub fn context_raw(&self) -> cl_context = CL_QUEUE_CONTEXT;
         pub fn device_raw(&self) -> cl_device_id = CL_QUEUE_DEVICE;
