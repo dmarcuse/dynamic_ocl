@@ -186,14 +186,13 @@ macro_rules! info_funcs {
     (
         $(
             $( #[ $outer:meta ] )*
-            pub fn $name:ident(&self) -> $ret:ty = self.$delegate:ident($param:ident);
+            pub fn $name:ident(&self) -> $ret:ty = $param:ident;
         )*
     ) => {
         $(
             $( #[ $outer ] )*
             pub fn $name(&self) -> crate::Result<$ret> {
-                <Self as crate::util::OclInfo>::$delegate(self, crate::raw::$param)
-                    .and_then(|v| crate::util::info_convert(&v))
+                <Self as crate::util::OclInfo>::get_info(self, crate::raw::$param)
             }
         )*
 
@@ -313,9 +312,9 @@ macro_rules! bitfield {
             }
         }
 
-        impl crate::util::OclInfoFrom<$typ> for $name {
-            fn convert(&value: &$typ) -> crate::Result<Self> {
-                Ok(Self(value))
+        impl crate::util::FromOclInfo for $name {
+            fn read<T: crate::util::OclInfo>(from: &T, param_name: T::Param) -> crate::Result<Self> {
+                <$typ>::read(from, param_name).map(Self)
             }
         }
     };
@@ -354,10 +353,17 @@ macro_rules! flag_enum {
             }
         }
 
-        impl crate::util::OclInfoFrom<$typ> for $name {
-            fn convert(&value: &$typ) -> crate::Result<Self> {
-                Self::from_raw(value)
-                    .ok_or_else(|| crate::Error::InvalidFlag { value, context: stringify!($name) })
+        impl crate::util::FromOclInfo for $name {
+            fn read<T: crate::util::OclInfo>(from: &T, param_name: T::Param) -> crate::Result<Self> {
+                match <$typ>::read(from, param_name)? {
+                    $(
+                        $vval => Ok(Self::$vname),
+                    )*
+                    value => Err(crate::Error::InvalidFlag {
+                        value,
+                        context: stringify!($name),
+                    })
+                }
             }
         }
     }

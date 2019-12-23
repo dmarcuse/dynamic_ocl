@@ -1,6 +1,7 @@
-
-use crate::raw::{cl_uint, cl_ulong, CL_FALSE};
+use crate::raw::{cl_bool, cl_uint, cl_ulong, CL_FALSE};
 use crate::{Error, Result};
+
+use generic_array::{ArrayLength, GenericArray};
 use libc::size_t;
 use std::convert::TryInto;
 use std::ffi::CString;
@@ -29,6 +30,16 @@ pub(crate) mod sealed {
 
 pub trait OclInfo: sealed::OclInfoInternal {
     /// Get raw binary info from OpenCL about this object.
+    ///
+    /// This function performs two calls to the underlying `clGet___Info`
+    /// function - one to determine the size of the information, and one to read
+    /// the data once an appropriately-sized vector has been allocated to store
+    /// it. If the reported size of the data changes between the two calls,
+    /// `Error::InvalidDataLength` will be returned.
+    ///
+    /// If the size of the data is known at compile time, `get_info_raw_sized`
+    /// should be preferred, as it only requires one call to `clGet___Info` and
+    /// does not perform any heap allocations.
     fn get_info_raw(&self, param_name: Self::Param) -> Result<Vec<u8>> {
         unsafe {
             let mut size = 0;
@@ -46,103 +57,136 @@ pub trait OclInfo: sealed::OclInfoInternal {
                 param_name,
                 size,
                 data.as_mut_ptr() as *mut _,
-                null_mut()
+                &mut size as _
             ));
+
+            if data.len() != size {
+                return Err(Error::InvalidDataLength {
+                    expected: data.len(),
+                    actual: size,
+                });
+            }
 
             Ok(data)
         }
     }
 
-    fn get_info_string(&self, param_name: Self::Param) -> Result<CString> {
-        let mut bytes = self.get_info_raw(param_name)?;
+    /// Get raw binary info from OpenCL about this object, with a constant size.
+    ///
+    /// If the size of the data as reported by OpenCL doesn't match the expected
+    /// size as specified by the generic parameter, `Error::InvalidLength` will
+    /// be returned.
+    ///
+    /// If the size of the data isn't known at compile time, `get_info_raw` can
+    /// be used instead.
+    fn get_info_raw_sized<L: ArrayLength<u8>>(
+        &self,
+        param_name: Self::Param,
+    ) -> Result<GenericArray<u8, L>> {
+        unsafe {
+            let mut array = GenericArray::default();
+            let mut size_ret = 0;
 
-        if let Some(i) = bytes.iter().position(|&b| b == b'\0') {
-            bytes.truncate(i);
+            ocl_try!(Self::DEBUG_CONTEXT => self.raw_info_internal(
+                param_name,
+                L::USIZE,
+                array.as_mut_ptr() as _,
+                &mut size_ret as _
+            ));
+
+            if L::USIZE != size_ret {
+                return Err(Error::InvalidDataLength {
+                    expected: L::USIZE,
+                    actual: size_ret,
+                });
+            }
+
+            Ok(array)
         }
-
-        Ok(CString::new(bytes).unwrap())
     }
 
-    fn get_info_ulong(&self, param_name: Self::Param) -> Result<cl_ulong> {
-        Ok(cl_ulong::from_ne_bytes(
-            self.get_info_raw(param_name)?
-                .as_slice()
-                .try_into()
-                .expect("invalid info size"),
-        ))
-    }
-
-    fn get_info_uint(&self, param_name: Self::Param) -> Result<cl_uint> {
-        Ok(cl_uint::from_ne_bytes(
-            self.get_info_raw(param_name)?
-                .as_slice()
-                .try_into()
-                .expect("invalid info size"),
-        ))
-    }
-
-    fn get_info_size_t(&self, param_name: Self::Param) -> Result<size_t> {
-        Ok(size_t::from_ne_bytes(
-            self.get_info_raw(param_name)?
-                .as_slice()
-                .try_into()
-                .expect("invalid info size"),
-        ))
-    }
-
-    fn get_info_bool(&self, param_name: Self::Param) -> Result<bool> {
-        self.get_info_uint(param_name).map(|b| b != CL_FALSE)
+    /// Get information about this object from OpenCL.
+    fn get_info<T: FromOclInfo>(&self, param_name: Self::Param) -> Result<T>
+    where
+        Self: Sized,
+    {
+        T::read(self, param_name)
     }
 }
 
 impl<T: sealed::OclInfoInternal> OclInfo for T {}
 
-pub(crate) trait OclInfoFrom<T: ?Sized>: Sized {
-    fn convert(value: &T) -> Result<Self>;
+pub trait FromOclInfo: Sized {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self>;
 }
 
-impl<T: Sized + Clone> OclInfoFrom<T> for T {
-    fn convert(value: &T) -> Result<Self> {
-        Ok(value.clone())
-    }
-}
+impl FromOclInfo for CString {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        let mut data = from.get_info_raw(param_name)?;
 
-impl<T> OclInfoFrom<size_t> for *mut T {
-    fn convert(&value: &usize) -> Result<Self> {
-        Ok(value as _)
-    }
-}
-
-impl<T> OclInfoFrom<[u8]> for *mut T {
-    fn convert(value: &[u8]) -> Result<Self> {
-        <*mut T>::convert(&size_t::convert(value)?)
-    }
-}
-
-impl OclInfoFrom<[u8]> for size_t {
-    fn convert(value: &[u8]) -> Result<Self> {
-        Ok(size_t::from_ne_bytes(value.try_into().map_err(|_| {
-            Error::InvalidDataLength {
-                expected: size_of::<size_t>(),
-                actual: value.len(),
-            }
-        })?))
-    }
-}
-
-impl<T: Sized + OclInfoFrom<[u8]>> OclInfoFrom<Vec<u8>> for Vec<T> {
-    fn convert(value: &Vec<u8>) -> Result<Self> {
-        let mut values = vec![];
-        for chunk in value.chunks(size_of::<T>()) {
-            values.push(T::convert(chunk)?);
+        if let Some(i) = data.iter().copied().position(|b| b == b'\0') {
+            data.truncate(i);
         }
-        Ok(values)
+
+        Ok(CString::new(data).unwrap())
     }
 }
 
-pub(crate) fn info_convert<F, T>(value: &F) -> Result<T>
-where
-    T: OclInfoFrom<F>,
-{
-    T::convert(value)
+impl FromOclInfo for cl_ulong {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        from.get_info_raw_sized(param_name)
+            .map(|d| Self::from_ne_bytes(d.into()))
+    }
+}
+
+impl FromOclInfo for size_t {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        from.get_info_raw_sized(param_name)
+            .map(|d| Self::from_ne_bytes(d.into()))
+    }
+}
+
+impl FromOclInfo for cl_uint {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        from.get_info_raw_sized(param_name)
+            .map(|d| Self::from_ne_bytes(d.into()))
+    }
+}
+
+impl FromOclInfo for bool {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        from.get_info_raw_sized(param_name)
+            .map(|d| cl_bool::from_ne_bytes(d.into()) != CL_FALSE)
+    }
+}
+
+impl FromOclInfo for Vec<size_t> {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        let raw = from.get_info_raw(param_name)?;
+        raw.chunks(size_of::<size_t>())
+            .map(|c| {
+                c.try_into()
+                    .map(size_t::from_ne_bytes)
+                    .map_err(|_| Error::InvalidDataLength {
+                        expected: size_of::<size_t>(),
+                        actual: c.len(),
+                    })
+            })
+            .collect()
+    }
+}
+
+impl<P> FromOclInfo for *mut P {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        size_t::read(from, param_name).map(|p| p as _)
+    }
+}
+
+impl<P> FromOclInfo for Vec<*mut P> {
+    fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self> {
+        Ok(Vec::<size_t>::read(from, param_name)?
+            .into_iter()
+            .map(|p| p as _)
+            .collect())
+    }
 }

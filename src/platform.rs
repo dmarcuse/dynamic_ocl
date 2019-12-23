@@ -94,11 +94,11 @@ impl Platform {
     }
 
     info_funcs! {
-        pub fn profile(&self) -> CString = self.get_info_string(CL_PLATFORM_PROFILE);
-        pub fn version(&self) -> CString = self.get_info_string(CL_PLATFORM_VERSION);
-        pub fn name(&self) -> CString = self.get_info_string(CL_PLATFORM_NAME);
-        pub fn vendor(&self) -> CString = self.get_info_string(CL_PLATFORM_VENDOR);
-        pub fn extensions(&self) -> CString = self.get_info_string(CL_PLATFORM_EXTENSIONS);
-        pub fn host_timer_resolution(&self) -> cl_ulong = self.get_info_ulong(CL_PLATFORM_HOST_TIMER_RESOLUTION);
+        pub fn profile(&self) -> CString = CL_PLATFORM_PROFILE;
+        pub fn version(&self) -> CString = CL_PLATFORM_VERSION;
+        pub fn name(&self) -> CString = CL_PLATFORM_NAME;
+        pub fn vendor(&self) -> CString = CL_PLATFORM_VENDOR;
+        pub fn extensions(&self) -> CString = CL_PLATFORM_EXTENSIONS;
+        pub fn host_timer_resolution(&self) -> cl_ulong = CL_PLATFORM_HOST_TIMER_RESOLUTION;
     }
 }

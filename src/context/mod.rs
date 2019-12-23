@@ -41,9 +41,9 @@ impl OclInfoInternal for Context {
 
 impl Context {
     info_funcs! {
-        pub fn reference_count(&self) -> cl_uint = self.get_info_uint(CL_CONTEXT_REFERENCE_COUNT);
-        pub fn num_devices(&self) -> cl_uint = self.get_info_uint(CL_CONTEXT_NUM_DEVICES);
-        pub fn device_ids(&self) -> Vec<cl_device_id> = self.get_info_raw(CL_CONTEXT_DEVICES);
+        pub fn reference_count(&self) -> cl_uint = CL_CONTEXT_REFERENCE_COUNT;
+        pub fn num_devices(&self) -> cl_uint = CL_CONTEXT_NUM_DEVICES;
+        pub fn device_ids(&self) -> Vec<cl_device_id> = CL_CONTEXT_DEVICES;
         // TODO: CL_CONTEXT_PROPERTIES
     }
 
