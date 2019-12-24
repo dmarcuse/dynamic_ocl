@@ -784,5 +784,5 @@ pub(crate) mod functions {
 
 pub use constants::*;
 pub use functions::ptrs::*;
-pub use functions::OpenCLVersion;
+pub use functions::{OpenCLVersion, SYSTEM_OPENCL_VERSION};
 pub use types::*;

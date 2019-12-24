@@ -1,4 +1,4 @@
-use crate::raw::{cl_int, cl_uint, error_name};
+use crate::raw::{cl_int, cl_uint, error_name, OpenCLVersion};
 use std::convert::Infallible;
 use std::fmt::{self, Debug, Display, Formatter};
 
@@ -50,6 +50,14 @@ pub enum Error {
     /// Data length mismatch
     #[error("Expected data length of {expected}, got data length {actual}")]
     InvalidDataLength { expected: usize, actual: usize },
+
+    /// Unsupported system OpenCL version
+    #[error("{expected} required for {context}, but system only supports {actual}")]
+    UnsupportedVersion {
+        expected: OpenCLVersion,
+        actual: OpenCLVersion,
+        context: &'static str,
+    },
 }
 
 impl Debug for Error {

@@ -3,6 +3,7 @@ extern crate dynamic_ocl;
 use dynamic_ocl::device::DeviceType;
 use dynamic_ocl::load_opencl;
 use dynamic_ocl::platform::Platform;
+use dynamic_ocl::queue::QueueBuilder;
 
 pub fn main() {
     let version = load_opencl().unwrap();
@@ -17,6 +18,10 @@ pub fn main() {
             let ctx = device.create_context().unwrap();
 
             println!("Created context: {:#?}", ctx);
+
+            let queue = QueueBuilder::new(&ctx, &device).build().unwrap();
+
+            println!("Created command queue: {:#?}", queue);
         }
     }
 }

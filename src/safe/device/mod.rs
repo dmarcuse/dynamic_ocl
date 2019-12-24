@@ -52,7 +52,7 @@ impl OclInfoInternal for Device {
 impl Device {
     /// Create a new context containing only this device, with no custom
     /// properties set.
-    pub fn create_context(&self) -> Result<Context> {
+    pub fn create_context(self) -> Result<Context> {
         unsafe {
             let mut props = [CL_CONTEXT_PLATFORM, self.platform()?.0 as _, 0];
             let mut err = CL_SUCCESS;
@@ -177,11 +177,11 @@ impl Device {
         pub fn sub_group_independent_forward_progress(&self) -> bool = CL_DEVICE_SUB_GROUP_INDEPENDENT_FORWARD_PROGRESS;
     }
 
-    pub fn platform(&self) -> Result<Platform> {
+    pub fn platform(self) -> Result<Platform> {
         self.platform_raw().map(Platform)
     }
 
-    pub fn parent_device(&self) -> Result<Option<Device>> {
+    pub fn parent_device(self) -> Result<Option<Device>> {
         self.parent_device_raw()
             .map(|id| if id.is_null() { None } else { Some(Device(id)) })
     }

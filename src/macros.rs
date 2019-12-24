@@ -65,7 +65,9 @@ macro_rules! raw_functions {
             pub static ref OPENCL_LIB: std::sync::Mutex<Option<Result<OpenCLVersion, &'static dlopen::Error>>> = Default::default();
         }
 
-        static mut OPENCL_VERSION: OpenCLVersion = OpenCLVersion::None;
+        /// OpenCL version supported by this system - only set once OpenCL lib
+        /// has been loaded.
+        pub static mut SYSTEM_OPENCL_VERSION: OpenCLVersion = OpenCLVersion::None;
 
         mod fnames {
             use const_cstr::const_cstr;
@@ -117,11 +119,11 @@ macro_rules! raw_functions {
 
             $(
                 if $apiname {
-                    OPENCL_VERSION = OpenCLVersion::$apiname;
+                    SYSTEM_OPENCL_VERSION = OpenCLVersion::$apiname;
                 }
             )*
 
-            Ok(OPENCL_VERSION)
+            Ok(SYSTEM_OPENCL_VERSION)
         }
 
         pub fn load_opencl() -> Result<OpenCLVersion, &'static dlopen::Error> {
@@ -155,7 +157,7 @@ macro_rules! raw_functions {
             $(
                 $(
                     pub unsafe extern "C" fn $fname ( $( $pname : $pty ),* ) $( -> $rty )* {
-                        panic!("OpenCL library function {} requires {}, but loaded version is {}", stringify!($fname), OpenCLVersion::$apiname, OPENCL_VERSION);
+                        panic!("OpenCL library function {} requires {}, but loaded version is {}", stringify!($fname), OpenCLVersion::$apiname, SYSTEM_OPENCL_VERSION);
                     }
                 )*
             )*
@@ -180,6 +182,20 @@ macro_rules! wrap_result {
         match $e {
             crate::raw::CL_SUCCESS => Ok(()),
             e => Err(crate::ApiError::new(e, $ctx)),
+        }
+    };
+}
+
+macro_rules! check_ocl_version {
+    ( $context:expr => $version:ident ) => {
+        if crate::raw::SYSTEM_OPENCL_VERSION <= crate::raw::OpenCLVersion::$version {
+            Err(crate::Error::UnsupportedVersion {
+                expected: crate::raw::OpenCLVersion::$version,
+                actual: crate::raw::SYSTEM_OPENCL_VERSION,
+                context: $context,
+            })
+        } else {
+            Ok(())
         }
     };
 }

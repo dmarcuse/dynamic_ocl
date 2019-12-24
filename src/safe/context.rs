@@ -1,5 +1,3 @@
-mod types;
-
 use crate::device::Device;
 use crate::raw::{
     clGetContextInfo, clReleaseContext, clRetainContext, cl_context, cl_context_info, cl_device_id,
@@ -9,7 +7,6 @@ use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use std::fmt::{self, Debug, Formatter};
 use std::os::raw::c_void;
-pub use types::*;
 
 /// An OpenCL context
 #[derive(PartialEq, Eq, Hash)]
