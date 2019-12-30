@@ -24,8 +24,10 @@ mod safe {
     pub mod device;
     mod error;
     pub mod platform;
+    pub mod program;
     pub mod queue;
     pub mod util;
+
     pub use error::*;
 }
 

@@ -1,4 +1,5 @@
 use crate::device::Device;
+use crate::queue::{Queue, QueueBuilder};
 use crate::raw::{
     clGetContextInfo, clReleaseContext, clRetainContext, cl_context, cl_context_info, cl_device_id,
     cl_uint,
@@ -50,6 +51,12 @@ impl OclInfoInternal for Context {
 }
 
 impl Context {
+    /// Create a new command queue using this context and the given device, with
+    /// no special properties set.
+    pub fn create_queue(&self, device: Device) -> Result<Queue> {
+        QueueBuilder::new(self, &device).build()
+    }
+
     /// Attempt to clone this context, using `clRetainContext` to ensure the
     /// context is not released while a wrapper still exists.
     pub fn try_clone(&self) -> Result<Self> {

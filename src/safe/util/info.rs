@@ -1,8 +1,8 @@
 use crate::raw::{cl_bool, cl_uint, cl_ulong, CL_FALSE};
 use crate::{Error, Result};
-
 use generic_array::{ArrayLength, GenericArray};
 use libc::size_t;
+use sealed::OclInfoInternal;
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::mem::size_of;
@@ -122,6 +122,12 @@ impl<T: sealed::OclInfoInternal> OclInfo for T {}
 
 pub trait FromOclInfo: Sized {
     fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self>;
+}
+
+impl FromOclInfo for Vec<u8> {
+    fn read<T: OclInfo>(from: &T, param_name: <T as OclInfoInternal>::Param) -> Result<Self> {
+        from.get_info_raw(param_name)
+    }
 }
 
 impl FromOclInfo for CString {

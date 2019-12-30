@@ -1,7 +1,7 @@
+use crate::context::Context;
+use crate::device::Device;
+use crate::queue::Queue;
 use crate::raw::*;
-use crate::safe::context::Context;
-use crate::safe::device::Device;
-use crate::safe::queue::Queue;
 use crate::Result;
 
 bitfield! {

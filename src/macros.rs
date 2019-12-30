@@ -216,6 +216,7 @@ macro_rules! info_funcs {
             }
         )*
 
+        #[allow(dead_code)]
         fn info_fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             f.debug_struct(std::any::type_name::<Self>().rsplit("::").next().unwrap())
                 $(
