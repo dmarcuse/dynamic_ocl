@@ -20,6 +20,7 @@ pub mod raw;
 
 #[cfg(feature = "safe")]
 mod safe {
+    pub mod buffer;
     pub mod context;
     pub mod device;
     mod error;

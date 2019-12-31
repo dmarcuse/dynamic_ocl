@@ -1,5 +1,6 @@
 extern crate dynamic_ocl;
 
+use dynamic_ocl::buffer::flags::{DeviceWriteOnly, HostNoAccess, HostReadOnly};
 use dynamic_ocl::device::DeviceType;
 use dynamic_ocl::load_opencl;
 use dynamic_ocl::platform::Platform;
@@ -38,6 +39,16 @@ pub fn main() {
                 program,
                 program.kernel_names()
             );
+
+            let buffer = ctx
+                .buffer_builder()
+                .alloc_host_ptr()
+                .host_access(HostReadOnly)
+                .device_access(DeviceWriteOnly)
+                .build_copying_slice(&[1, 2, 3, 4, 5])
+                .unwrap();
+
+            println!("Created buffer: {:#?}", buffer);
         }
     }
 }

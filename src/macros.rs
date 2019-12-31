@@ -218,7 +218,7 @@ macro_rules! info_funcs {
 
         #[allow(dead_code)]
         fn info_fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            f.debug_struct(std::any::type_name::<Self>().rsplit("::").next().unwrap())
+            f.debug_struct(std::any::type_name::<Self>())
                 $(
                     .field(
                         stringify!($param),
@@ -364,7 +364,7 @@ macro_rules! flag_enum {
 
         impl $name {
             /// Get the raw value of this flag
-            pub fn raw(self) -> $typ {
+            pub const fn raw(self) -> $typ {
                 self as $typ
             }
 

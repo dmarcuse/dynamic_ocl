@@ -1,6 +1,5 @@
 mod types;
 
-use crate::context::Context;
 use crate::device::Device;
 use crate::raw::*;
 use crate::util::sealed::OclInfoInternal;
@@ -85,10 +84,6 @@ impl Queue {
         pub fn properties(&self) -> QueueProperties = CL_QUEUE_PROPERTIES;
         pub fn size(&self) -> cl_uint = CL_QUEUE_SIZE;
         pub fn device_default_raw(&self) -> cl_command_queue = CL_QUEUE_DEVICE_DEFAULT;
-    }
-
-    pub fn context(&self) -> Result<Context> {
-        self.context_raw().map(Context)
     }
 
     pub fn device(&self) -> Result<Device> {
