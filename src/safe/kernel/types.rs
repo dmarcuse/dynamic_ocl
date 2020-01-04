@@ -2,47 +2,60 @@ use crate::buffer::flags::HostAccess;
 use crate::buffer::{Buffer, MemSafe};
 use crate::kernel::Kernel;
 use crate::raw::{clSetKernelArg, cl_kernel, cl_mem, cl_uint};
+use crate::safe::kernel::types::sealed::BindProjectInternal;
 use crate::Result;
 use libc::size_t;
-use std::cell::Cell;
 use std::ffi::c_void;
-use std::mem::size_of_val;
+use std::marker::PhantomPinned;
+use std::mem::{size_of, size_of_val};
+use std::pin::Pin;
 
-mod sealed {
+pub(crate) mod sealed {
+    use super::{BindProject, KernelArgList};
     use crate::kernel::Kernel;
     use crate::raw::cl_kernel;
-    use crate::safe::kernel::KernelArgList;
     use crate::Result;
+    use std::pin::Pin;
 
-    pub trait KernelArgInternal {}
     pub trait KernelArgListInternal {
         fn bind(self, kernel: cl_kernel) -> Result<Kernel<Self>>
         where
             Self: Sized + KernelArgList;
     }
+
+    pub trait BindProjectInternal<'a> {
+        fn project(self: Pin<&'a mut Self>) -> Self::Projected
+        where
+            Self: BindProject<'a>;
+    }
 }
 
 /// A trait implemented by types that can be used as an individual kernel
 /// argument
-pub trait KernelArg: sealed::KernelArgInternal {
-    /// Get the data of this kernel argument, as a size and pointer to be passed
+pub trait KernelArg {
+    /// The type of value which is passed to the `clSetKernelArg` call
+    type ArgType;
+
+    /// Get the data of this kernel argument, as a size and value to be passed
     /// to `clSetKernelArg`
-    fn as_raw_kernel_arg(&self) -> (size_t, *const c_void);
+    fn as_raw_kernel_arg(&self) -> (size_t, &Self::ArgType);
 }
 
 // values can be used as individual kernel args
-impl<T: MemSafe> sealed::KernelArgInternal for T {}
 impl<T: MemSafe> KernelArg for T {
-    fn as_raw_kernel_arg(&self) -> (size_t, *const c_void) {
-        (size_of_val(self), self as *const Self as _)
+    type ArgType = T;
+
+    fn as_raw_kernel_arg(&self) -> (size_t, &T) {
+        (size_of_val(self), &self)
     }
 }
 
 // buffers can be used as individual kernel args
-impl<H: HostAccess, T: MemSafe> sealed::KernelArgInternal for Buffer<'_, H, T> {}
 impl<H: HostAccess, T: MemSafe> KernelArg for Buffer<'_, H, T> {
-    fn as_raw_kernel_arg(&self) -> (size_t, *const c_void) {
-        (size_of_val(&self.raw()), &self.raw() as *const cl_mem as _)
+    type ArgType = cl_mem;
+
+    fn as_raw_kernel_arg(&self) -> (size_t, &cl_mem) {
+        (size_of::<cl_mem>(), &self.handle)
     }
 }
 
@@ -55,9 +68,10 @@ impl<H: HostAccess, T: MemSafe> KernelArg for Buffer<'_, H, T> {
 /// lifetime is not recorded in the type signature, so moving/mutating this type
 /// is never safe outside of the provided inherent methods.
 pub struct Bound<A: KernelArg> {
+    _pinned: PhantomPinned,
     kernel: cl_kernel,
     index: cl_uint,
-    value: Cell<A>,
+    value: A,
 }
 
 impl<K: KernelArg> Bound<K> {
@@ -70,44 +84,21 @@ impl<K: KernelArg> Bound<K> {
                 kernel,
                 index,
                 size,
-                ptr
+                ptr as *const _ as _
             ))?;
 
             Ok(Self {
+                _pinned: PhantomPinned,
                 kernel,
                 index,
-                value: Cell::new(value),
+                value,
             })
         }
     }
+}
 
-    /// Copy the current value of this argument
-    pub fn get(&self) -> K
-    where
-        K: Copy,
-    {
-        self.value.get()
-    }
-
-    /// Set this kernel argument to a new value, and return the old value
-    pub fn replace(&self, new: K) -> Result<K> {
-        unsafe {
-            let (size, ptr) = new.as_raw_kernel_arg();
-            wrap_result!("clSetKernelArg" => clSetKernelArg(
-                self.kernel,
-                self.index,
-                size,
-                ptr
-            ))?;
-
-            Ok(self.value.replace(new))
-        }
-    }
-
-    /// Set this kernel argument to a new value
-    pub fn set(&self, new: K) -> Result<()> {
-        self.replace(new).map(|_| ())
-    }
+pub trait BindProject<'a>: BindProjectInternal<'a> {
+    type Projected: 'a;
 }
 
 /// A trait implemented by types that can be used as a complete set of kernel

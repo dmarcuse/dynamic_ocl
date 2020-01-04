@@ -1,11 +1,12 @@
 extern crate dynamic_ocl;
 
-use dynamic_ocl::buffer::flags::{DeviceWriteOnly, HostNoAccess, HostReadOnly};
+use dynamic_ocl::buffer::flags::{DeviceReadOnly, DeviceWriteOnly, HostNoAccess, HostReadOnly};
 use dynamic_ocl::device::DeviceType;
 use dynamic_ocl::load_opencl;
 use dynamic_ocl::platform::Platform;
 use dynamic_ocl::program::ProgramBuilder;
 use dynamic_ocl::queue::QueueBuilder;
+use std::ffi::CString;
 
 const KERNEL: &str = r#"
 __kernel void sum(__constant float *a, __constant float *b, __global float *c) {
@@ -40,15 +41,34 @@ pub fn main() {
                 program.kernel_names()
             );
 
-            let buffer = ctx
+            let a = ctx
                 .buffer_builder()
-                .alloc_host_ptr()
-                .host_access(HostReadOnly)
-                .device_access(DeviceWriteOnly)
-                .build_copying_slice(&[1, 2, 3, 4, 5])
+                .host_access::<HostNoAccess>()
+                .device_access::<DeviceReadOnly>()
+                .build_copying_slice(&[1.0f32, 2.0, 3.0])
                 .unwrap();
 
-            println!("Created buffer: {:#?}", buffer);
+            let b = ctx
+                .buffer_builder()
+                .host_access::<HostNoAccess>()
+                .device_access::<DeviceReadOnly>()
+                .build_copying_slice(&[1.0f32, 2.0, 3.0])
+                .unwrap();
+
+            let c = ctx
+                .buffer_builder()
+                .host_access::<HostReadOnly>()
+                .device_access::<DeviceWriteOnly>()
+                .build_with_size::<f32>(3)
+                .unwrap();
+
+            let args = (a, b, c);
+
+            println!("Created arguments: {:#?}", args);
+
+            let kernel = program
+                .create_kernel(&CString::new("sum").unwrap(), args)
+                .unwrap();
         }
     }
 }

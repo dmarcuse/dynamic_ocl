@@ -6,6 +6,7 @@ use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use std::ffi::{c_void, CStr, CString};
 use std::fmt::{self, Debug, Formatter};
+use std::pin::Pin;
 pub use types::*;
 
 #[derive(PartialEq, Eq, Hash)]
@@ -52,10 +53,15 @@ impl<T: KernelArgList> OclInfoInternal for Kernel<T> {
 }
 
 impl<T: KernelArgList> Kernel<T> {
-    /// Get a reference to the argument list of this kernel, allowing the values
-    /// to be updated after kernel creation
-    pub fn arguments(&mut self) -> &T::Bound {
-        &self.args
+    pub fn arguments<'a>(&'a mut self) -> <T::Bound as BindProject<'a>>::Projected
+    where
+        T::Bound: BindProject<'a>,
+    {
+        unsafe {
+            use sealed::BindProjectInternal;
+            let bound: Pin<&'a mut T::Bound> = Pin::new_unchecked(&mut self.args);
+            BindProjectInternal::project(bound)
+        }
     }
 
     info_funcs! {

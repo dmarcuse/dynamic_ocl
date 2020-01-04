@@ -13,15 +13,13 @@ pub use types::*;
 // TODO: a buffer could be dropped while other OpenCL objects with implicit
 //  references to it (e.g. subbuffers, kernels, etc?) exist, violating safety
 //  guarantees?
-// note: #[repr(transparent)] is required here for correctness of KernelArg impl
-//  if removed, update KernelArg impl to override arg_size/arg_ptr methods
 #[derive(PartialEq, Eq, Hash)]
-#[repr(transparent)]
 pub struct Buffer<'a, H: HostAccess, T: MemSafe> {
     _lifetime: PhantomData<&'a ()>,
     _host_access: PhantomData<H>,
     _type: PhantomData<T>,
-    handle: cl_mem,
+    pub(crate) handle: cl_mem,
+    size: size_t,
 }
 
 impl<'a, H: HostAccess, T: MemSafe> Drop for Buffer<'a, H, T> {
@@ -64,6 +62,10 @@ impl<'a, H: HostAccess, T: MemSafe> OclInfoInternal for Buffer<'a, H, T> {
 impl<'a, H: HostAccess, T: MemSafe> Buffer<'a, H, T> {
     pub fn raw(&self) -> cl_mem {
         self.handle
+    }
+
+    pub fn rust_size(&self) -> size_t {
+        self.size
     }
 
     info_funcs! {

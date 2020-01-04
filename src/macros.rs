@@ -404,7 +404,6 @@ macro_rules! kernel_arg_list_tuples {
         ),* $(,)?
     ) => {
         $(
-            $( #[ $meta ] )*
             #[allow(unused_parens)]
             impl<
                 $( $tyvar : KernelArg ),*
@@ -438,6 +437,30 @@ macro_rules! kernel_arg_list_tuples {
                 type Bound = (
                     $( Bound< $tyvar > ),*
                 );
+            }
+
+            #[allow(unused_parens)]
+            impl<
+                'a,
+                $( $tyvar : 'a + KernelArg ),*
+            > BindProject<'a> for ( $( Bound<$tyvar> ),* ) {
+                type Projected = (
+                    $( Pin<&'a mut Bound<$tyvar>> ),*
+                );
+            }
+
+            #[allow(unused_parens)]
+            impl<
+                'a,
+                $( $tyvar : 'a + KernelArg ),*
+            > sealed::BindProjectInternal<'a> for ( $( Bound<$tyvar> ),* ) {
+                #[allow(non_snake_case)]
+                fn project(self: Pin<&'a mut Self>) -> <Self as BindProject<'a>>::Projected {
+                    unsafe {
+                        let ( $( $tyvar ),* ) = self.get_unchecked_mut();
+                        ( $( Pin::new_unchecked($tyvar) ),* )
+                    }
+                }
             }
         )*
     }

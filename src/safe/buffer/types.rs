@@ -9,7 +9,6 @@ use std::mem::{size_of, size_of_val};
 use std::ptr::null_mut;
 
 /// A trait indicating that a type may be safely stored in an OpenCL buffer.
-///
 /// OpenCL buffers allow data to be moved and manipulated in ways that may
 /// violate Rust's safety rules. Therefore, this trait may only be implemented
 /// for types that have the lifetime `'static`, are sized, have copy semantics,
@@ -122,12 +121,12 @@ impl<'c, H: HostAccess, D: DeviceAccess, F: BufferFlags> BufferBuilder<'c, H, D,
     }
 
     /// Set the host accessibility for this buffer.
-    pub fn host_access<H2: HostAccess>(self, _access: H2) -> BufferBuilder<'c, H2, D, F> {
+    pub fn host_access<H2: HostAccess>(self) -> BufferBuilder<'c, H2, D, F> {
         self.update_flags()
     }
 
     /// Set the device accessibility for this buffer.
-    pub fn device_access<D2: DeviceAccess>(self, _access: D2) -> BufferBuilder<'c, H, D2, F> {
+    pub fn device_access<D2: DeviceAccess>(self) -> BufferBuilder<'c, H, D2, F> {
         self.update_flags()
     }
 
@@ -160,6 +159,7 @@ impl<'c, H: HostAccess, D: DeviceAccess, F: BufferFlags> BufferBuilder<'c, H, D,
                 _host_access: PhantomData,
                 _type: PhantomData,
                 handle,
+                size,
             })
         }
     }
