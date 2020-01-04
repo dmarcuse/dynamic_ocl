@@ -7,12 +7,13 @@ edition = "2018"
 [dependencies]
 libc = "0.2.66"
 dlopen = "0.1.8"
-thiserror = "1.0.9"
+thiserror = { version = "1.0.9", optional = true }
 lazy_static = "1.4.0"
 const-cstr = "0.3.0"
-generic-array = "0.13.2"
+generic-array = { version = "0.13.2", optional = true }
 log = { version = "0.4.8", optional = true }
+tynm = { version = "0.1.1", optional = true }
 
 [features]
-safe = [ "log" ]
+safe = [ "thiserror", "generic-array", "log", "tynm" ]
 default = [ "safe" ]

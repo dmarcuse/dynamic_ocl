@@ -55,6 +55,13 @@ impl Program {
         }
     }
 
+    /// Get the raw handle for this program. Note that this handle is only a raw
+    /// pointer and does not use RAII to ensure validity, so you must manually
+    /// make sure that it's not released while still in use.
+    pub fn raw(&self) -> cl_program {
+        self.0
+    }
+
     info_funcs! {
         pub fn reference_count(&self) -> cl_uint = CL_PROGRAM_REFERENCE_COUNT;
         pub fn context_raw(&self) -> cl_context = CL_PROGRAM_CONTEXT;

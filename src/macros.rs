@@ -218,7 +218,7 @@ macro_rules! info_funcs {
 
         #[allow(dead_code)]
         fn info_fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            f.debug_struct(std::any::type_name::<Self>())
+            f.debug_struct(&tynm::type_name::<Self>())
                 $(
                     .field(
                         stringify!($param),
@@ -391,5 +391,54 @@ macro_rules! flag_enum {
                 }
             }
         }
+    }
+}
+
+/// Define KernelArgList implementations for tuple types
+#[cfg(feature = "safe")]
+macro_rules! kernel_arg_list_tuples {
+    (
+        $(
+            $( #[ $meta:meta ] )*
+            ( $( $tyvar:ident ),* $(,)? )
+        ),* $(,)?
+    ) => {
+        $(
+            $( #[ $meta ] )*
+            #[allow(unused_parens)]
+            impl<
+                $( $tyvar : KernelArg ),*
+            > sealed::KernelArgListInternal for (
+                $( $tyvar ),*
+            ) {
+                #[allow(unused_variables, unused_assignments, unused_mut, non_snake_case)]
+                fn bind(self, kernel: cl_kernel) -> Result<Kernel<Self>> {
+                    let mut idx = 0;
+                    let ( $( $tyvar ),* ) = self;
+
+                    $(
+                        let $tyvar = Bound::bind(kernel, idx, $tyvar)?;
+                        idx += 1;
+                    )*
+
+                    Ok(Kernel {
+                        handle: kernel,
+                        args: ( $( $tyvar ),* )
+                    })
+                }
+            }
+
+            $( #[ $meta ] )*
+            #[allow(unused_parens)]
+            impl<
+                $( $tyvar : KernelArg ),*
+            > KernelArgList for (
+                $( $tyvar ),*
+            ) {
+                type Bound = (
+                    $( Bound< $tyvar > ),*
+                );
+            }
+        )*
     }
 }

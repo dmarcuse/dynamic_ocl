@@ -24,6 +24,7 @@ mod safe {
     pub mod context;
     pub mod device;
     mod error;
+    pub mod kernel;
     pub mod platform;
     pub mod program;
     pub mod queue;
