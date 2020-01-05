@@ -1,6 +1,7 @@
 use super::{Kernel, UnboundKernel};
 use crate::buffer::flags::HostAccess;
-use crate::buffer::{Buffer, MemSafe};
+use crate::buffer::sealed::AsBufferInternal;
+use crate::buffer::{AsBuffer, Buffer, MemSafe};
 use crate::raw::*;
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
@@ -331,3 +332,13 @@ kernel_arg_list_tuples! {
     (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y),
     (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z),
 }
+
+impl<'a, H: HostAccess, T: MemSafe> AsBufferInternal<'a, H, T>
+    for Pin<&mut Bound<Buffer<'a, H, T>>>
+{
+    fn as_buffer(&mut self) -> &Buffer<'a, H, T> {
+        self.get()
+    }
+}
+
+impl<'a, H: HostAccess, T: MemSafe> AsBuffer<'a, H, T> for Pin<&mut Bound<Buffer<'a, H, T>>> {}

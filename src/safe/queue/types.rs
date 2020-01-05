@@ -1,8 +1,14 @@
+use crate::buffer::flags::HostAccess;
+use crate::buffer::MemSafe;
 use crate::context::Context;
 use crate::device::Device;
 use crate::queue::Queue;
 use crate::raw::*;
+use crate::safe::buffer::flags::{HostReadable, HostWritable};
+use crate::safe::buffer::AsBuffer;
 use crate::Result;
+use std::mem::size_of_val;
+use std::ptr::null_mut;
 
 bitfield! {
     pub struct QueueProperties(cl_command_queue_properties) {
@@ -81,6 +87,69 @@ impl<'c, 'd> QueueBuilder<'c, 'd> {
 
             wrap_result!("clCreateCommandQueue" => err)?;
             Ok(Queue(queue))
+        }
+    }
+}
+
+#[must_use]
+pub struct BufferCmd<'q, 'a, H: HostAccess, T: MemSafe> {
+    pub(super) queue: &'q Queue,
+    pub(super) buffer: &'q mut dyn AsBuffer<'a, H, T>,
+    pub(super) offset: Option<usize>,
+}
+
+impl<'q, 'a, H: HostAccess, T: MemSafe> BufferCmd<'q, 'a, H, T> {
+    /// Set the offset within the OpenCL buffer for this memory operation.
+    ///
+    /// Offsets in host memory should be set using slicing.
+    pub fn offset(self, offset: usize) -> Self {
+        Self {
+            offset: Some(offset),
+            ..self
+        }
+    }
+
+    /// Perform a blocking read of the buffer into the given slice.
+    pub fn read(self, dest: &mut [T]) -> Result<()>
+    where
+        H: HostReadable,
+    {
+        unsafe {
+            wrap_result!("clEnqueueReadBuffer" => clEnqueueReadBuffer(
+                self.queue.raw(),
+                self.buffer.as_buffer().raw(),
+                CL_TRUE,
+                self.offset.unwrap_or(0),
+                size_of_val(dest),
+                dest as *mut _ as _,
+                0,
+                null_mut(),
+                null_mut()
+            ))?;
+
+            Ok(())
+        }
+    }
+
+    /// Perform a blocking write of the buffer into the given slice.
+    pub fn write(self, src: &[T]) -> Result<()>
+    where
+        H: HostWritable,
+    {
+        unsafe {
+            wrap_result!("clEnqueueWriteBuffer" => clEnqueueWriteBuffer(
+                self.queue.raw(),
+                self.buffer.as_buffer().raw(),
+                CL_TRUE,
+                self.offset.unwrap_or(0),
+                size_of_val(src),
+                src as *const _ as _,
+                0,
+                null_mut(),
+                null_mut(),
+            ))?;
+
+            Ok(())
         }
     }
 }

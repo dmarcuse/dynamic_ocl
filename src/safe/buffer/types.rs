@@ -221,3 +221,24 @@ bitfield! {
         pub const HOST_NO_ACCESS = CL_MEM_HOST_NO_ACCESS;
     }
 }
+
+pub(crate) mod sealed {
+    use crate::buffer::flags::HostAccess;
+    use crate::buffer::{Buffer, MemSafe};
+
+    pub trait AsBufferInternal<'a, H: HostAccess, T: MemSafe> {
+        fn as_buffer(&mut self) -> &Buffer<'a, H, T>;
+    }
+}
+
+/// A trait implemented for types which wrap an OpenCL buffer and can be used
+/// to enqueue buffer operations
+pub trait AsBuffer<'a, H: HostAccess, T: MemSafe>: sealed::AsBufferInternal<'a, H, T> {}
+
+impl<'a, H: HostAccess, T: MemSafe> sealed::AsBufferInternal<'a, H, T> for Buffer<'a, H, T> {
+    fn as_buffer(&mut self) -> &Buffer<'a, H, T> {
+        self as &_
+    }
+}
+
+impl<'a, H: HostAccess, T: MemSafe> AsBuffer<'a, H, T> for Buffer<'a, H, T> {}

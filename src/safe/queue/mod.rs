@@ -1,5 +1,7 @@
 mod types;
 
+use crate::buffer::flags::HostAccess;
+use crate::buffer::{AsBuffer, MemSafe};
 use crate::device::Device;
 use crate::raw::*;
 use crate::util::sealed::OclInfoInternal;
@@ -92,5 +94,17 @@ impl Queue {
 
     pub fn device_default(&self) -> Result<Queue> {
         self.device_default_raw().map(Queue)
+    }
+
+    /// Begin a new buffer command
+    pub fn buffer_cmd<'q, 'a, H: HostAccess, T: MemSafe>(
+        &'q mut self,
+        buffer: &'q mut dyn AsBuffer<'a, H, T>,
+    ) -> BufferCmd<'q, 'a, H, T> {
+        BufferCmd {
+            queue: self,
+            buffer,
+            offset: None,
+        }
     }
 }
