@@ -4,9 +4,9 @@ use crate::device::Device;
 use crate::raw::*;
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
+use std::ffi::c_void;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
-use std::os::raw::c_void;
 pub use types::*;
 
 /// An OpenCL command queue

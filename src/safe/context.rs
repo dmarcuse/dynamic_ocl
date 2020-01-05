@@ -6,8 +6,8 @@ use crate::raw::{
 };
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
+use std::ffi::c_void;
 use std::fmt::{self, Debug, Formatter};
-use std::os::raw::c_void;
 
 /// An OpenCL context
 #[derive(PartialEq, Eq, Hash)]

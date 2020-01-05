@@ -12,9 +12,9 @@ use crate::Result;
 use libc::size_t;
 use std::ffi::CString;
 
+use std::ffi::c_void;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
-use std::os::raw::c_void;
 use std::ptr::null_mut;
 pub use types::*;
 
