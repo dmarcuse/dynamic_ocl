@@ -394,6 +394,13 @@ macro_rules! flag_enum {
     }
 }
 
+/// Count the length of a tuple type
+#[cfg(feature = "safe")]
+macro_rules! tuple_len {
+    ( () ) => { 0 };
+    ( ( $head:ty $( , $tail:ty )* $(,)? ) ) => { 1 + tuple_len! { ( $( $tail ),* ) } };
+}
+
 /// Define KernelArgList implementations for tuple types
 #[cfg(feature = "safe")]
 macro_rules! kernel_arg_list_tuples {
@@ -411,12 +418,12 @@ macro_rules! kernel_arg_list_tuples {
                 $( $tyvar ),*
             ) {
                 #[allow(unused_variables, unused_assignments, unused_mut, non_snake_case)]
-                fn bind(self, kernel: UnboundKernel) -> Result<Kernel<Self>> {
+                fn bind(self, kernel: UnboundKernel, type_checks: bool) -> Result<Kernel<Self>> {
                     let mut idx = 0;
                     let ( $( $tyvar ),* ) = self;
 
                     $(
-                        let $tyvar = Bound::bind(kernel.0, idx, $tyvar)?;
+                        let $tyvar = Bound::bind(&kernel, idx, $tyvar, type_checks)?;
                         idx += 1;
                     )*
 
@@ -437,6 +444,8 @@ macro_rules! kernel_arg_list_tuples {
                 type Bound = (
                     $( Bound< $tyvar > ),*
                 );
+
+                const NUM_ARGS: usize = tuple_len! { ( $( $tyvar ),* ) };
             }
 
             #[allow(unused_parens)]

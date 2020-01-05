@@ -5,7 +5,10 @@ use crate::raw::*;
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use libc::size_t;
+use std::any::type_name;
+use std::ffi::c_void;
 use std::ffi::CString;
+use std::fmt::{self, Debug, Formatter};
 use std::marker::PhantomPinned;
 use std::mem::{size_of, size_of_val};
 use std::pin::Pin;
@@ -17,7 +20,7 @@ pub(crate) mod sealed {
     use std::pin::Pin;
 
     pub trait KernelArgListInternal {
-        fn bind(self, kernel: UnboundKernel) -> Result<Kernel<Self>>
+        fn bind(self, kernel: UnboundKernel, type_checks: bool) -> Result<Kernel<Self>>
         where
             Self: Sized + KernelArgList;
     }
@@ -30,6 +33,9 @@ pub(crate) mod sealed {
 }
 
 pub trait KernelInfo: OclInfoInternal<Param = cl_kernel_info> + Sized {
+    /// Get a reference to the unbound form of this kernel
+    fn as_unbound(&self) -> &UnboundKernel;
+
     info_funcs! {
         fn function_name(&self) -> CString = CL_KERNEL_FUNCTION_NAME;
         fn num_args(&self) -> cl_uint = CL_KERNEL_NUM_ARGS;
@@ -38,6 +44,92 @@ pub trait KernelInfo: OclInfoInternal<Param = cl_kernel_info> + Sized {
         fn program_raw(&self) -> cl_program = CL_KERNEL_PROGRAM;
         fn attributes(&self) -> CString = CL_KERNEL_ATTRIBUTES;
     }
+
+    fn arg_info(&self, idx: cl_uint) -> KernelArgInfo {
+        let num_args = self.num_args().unwrap();
+        assert!(
+            idx < num_args,
+            "index {} is out of range for kernel of arity {}",
+            idx,
+            num_args
+        );
+
+        KernelArgInfo {
+            kernel: self.as_unbound(),
+            idx,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct KernelArgInfo<'a> {
+    kernel: &'a UnboundKernel,
+    idx: cl_uint,
+}
+
+impl<'a> OclInfoInternal for KernelArgInfo<'a> {
+    type Param = cl_kernel_arg_info;
+    const DEBUG_CONTEXT: &'static str = "clGetKernelArgInfo";
+
+    unsafe fn raw_info_internal(
+        &self,
+        param_name: Self::Param,
+        param_value_size: usize,
+        param_value: *mut c_void,
+        param_value_size_ret: *mut usize,
+    ) -> i32 {
+        clGetKernelArgInfo(
+            self.kernel.0,
+            self.idx,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret,
+        )
+    }
+}
+
+impl<'a> Debug for KernelArgInfo<'a> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.info_fmt(f)
+    }
+}
+
+flag_enum! {
+    pub enum ArgAddressQualifier(cl_kernel_arg_address_qualifier) {
+        Global = CL_KERNEL_ARG_ADDRESS_GLOBAL,
+        Local = CL_KERNEL_ARG_ADDRESS_LOCAL,
+        Constant = CL_KERNEL_ARG_ADDRESS_CONSTANT,
+        Private = CL_KERNEL_ARG_ADDRESS_PRIVATE
+    }
+}
+
+flag_enum! {
+    pub enum ArgAccessQualifier(cl_kernel_arg_access_qualifier) {
+        ReadOnly = CL_KERNEL_ARG_ACCESS_READ_ONLY,
+        WriteOnly = CL_KERNEL_ARG_ACCESS_WRITE_ONLY,
+        ReadWrite = CL_KERNEL_ARG_ACCESS_READ_WRITE,
+        None = CL_KERNEL_ARG_ACCESS_NONE
+    }
+}
+
+bitfield! {
+    pub struct ArgTypeQualifier(cl_kernel_arg_type_qualifier) {
+        pub const CONST = CL_KERNEL_ARG_TYPE_CONST;
+        pub const RESTRICT = CL_KERNEL_ARG_TYPE_RESTRICT;
+        pub const VOLATILE = CL_KERNEL_ARG_TYPE_VOLATILE;
+        pub const NONE = CL_KERNEL_ARG_TYPE_NONE;
+    }
+}
+
+impl<'a> KernelArgInfo<'a> {
+    info_funcs! {
+        pub fn address_qualifier(&self) -> ArgAddressQualifier = CL_KERNEL_ARG_ADDRESS_QUALIFIER;
+        pub fn access_qualifier(&self) -> ArgAccessQualifier = CL_KERNEL_ARG_ACCESS_QUALIFIER;
+        pub fn type_name(&self) -> CString = CL_KERNEL_ARG_TYPE_NAME;
+        pub fn type_qualifier(&self) -> ArgTypeQualifier = CL_KERNEL_ARG_TYPE_QUALIFIER;
+        pub fn arg_name(&self) -> CString = CL_KERNEL_ARG_NAME;
+    }
 }
 
 /// A trait implemented by types that can be used as an individual kernel
@@ -45,6 +137,10 @@ pub trait KernelInfo: OclInfoInternal<Param = cl_kernel_info> + Sized {
 pub trait KernelArg {
     /// The type of value which is passed to the `clSetKernelArg` call
     type ArgType;
+
+    /// Check whether a given OpenCL C type (e.g. `float` or `ulong`) is
+    /// compatible with this kernel argument type.
+    fn is_param_type_compatible(c_type: &str) -> bool;
 
     /// Get the data of this kernel argument, as a size and value to be passed
     /// to `clSetKernelArg`
@@ -55,6 +151,10 @@ pub trait KernelArg {
 impl<T: MemSafe> KernelArg for T {
     type ArgType = T;
 
+    fn is_param_type_compatible(c_type: &str) -> bool {
+        T::is_param_type_compatible(c_type)
+    }
+
     fn as_raw_kernel_arg(&self) -> (size_t, &T) {
         (size_of_val(self), &self)
     }
@@ -63,6 +163,14 @@ impl<T: MemSafe> KernelArg for T {
 // buffers can be used as individual kernel args
 impl<H: HostAccess, T: MemSafe> KernelArg for Buffer<'_, H, T> {
     type ArgType = cl_mem;
+
+    fn is_param_type_compatible(c_type: &str) -> bool {
+        c_type
+            .rsplitn(2, '*')
+            .nth(1)
+            .map(T::is_param_type_compatible)
+            .unwrap_or(false)
+    }
 
     fn as_raw_kernel_arg(&self) -> (size_t, &cl_mem) {
         (size_of::<cl_mem>(), &self.handle)
@@ -85,13 +193,44 @@ pub struct Bound<A: KernelArg> {
 }
 
 impl<K: KernelArg> Bound<K> {
-    pub(crate) fn bind(kernel: cl_kernel, index: cl_uint, value: K) -> Result<Self> {
-        // TODO: check type of argument against OpenCL kernel parameter type
+    pub(crate) fn bind(
+        kernel: &UnboundKernel,
+        index: cl_uint,
+        value: K,
+        type_check: bool,
+    ) -> Result<Self> {
         unsafe {
             let (size, ptr) = value.as_raw_kernel_arg();
 
+            if type_check && SYSTEM_OPENCL_VERSION >= OpenCLVersion::CL12 {
+                let arg_info = kernel.arg_info(index);
+
+                match arg_info.type_name() {
+                    Ok(s) if K::is_param_type_compatible(&s.to_string_lossy()) => {}
+                    Ok(s) => {
+                        panic!(
+                            "Kernel argument type mismatch - OpenCL type {:?} is not compatible with {} for argument #{} ({:?}) of kernel {:?}",
+                            s,
+                            type_name::<K>(),
+                            index,
+                            arg_info,
+                            kernel
+                        );
+                    }
+                    Err(e) => {
+                        log::warn!(
+                            "Could not check type of argument #{} ({:?}) of kernel {:?}: {:?}",
+                            index,
+                            arg_info,
+                            kernel,
+                            e
+                        );
+                    }
+                }
+            }
+
             wrap_result!("clSetKernelArg" => clSetKernelArg(
-                kernel,
+                kernel.0,
                 index,
                 size,
                 ptr as *const _ as _
@@ -99,7 +238,7 @@ impl<K: KernelArg> Bound<K> {
 
             Ok(Self {
                 _pinned: PhantomPinned,
-                kernel,
+                kernel: kernel.0,
                 index,
                 value,
             })
@@ -158,6 +297,9 @@ pub trait KernelArgList: sealed::KernelArgListInternal + Sized {
     /// The "bound" form of this argument list, allowing updating arguments
     /// after the initial creation of the kernel.
     type Bound;
+
+    /// The number of arguments specified by this argument list.
+    const NUM_ARGS: usize;
 }
 
 kernel_arg_list_tuples! {

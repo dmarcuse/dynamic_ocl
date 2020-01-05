@@ -83,14 +83,48 @@ impl<T: KernelArgList> OclInfoInternal for Kernel<T> {
     }
 }
 
-impl KernelInfo for UnboundKernel {}
-impl<T: KernelArgList> KernelInfo for Kernel<T> {}
+impl KernelInfo for UnboundKernel {
+    fn as_unbound(&self) -> &UnboundKernel {
+        &self
+    }
+}
+
+impl<T: KernelArgList> KernelInfo for Kernel<T> {
+    fn as_unbound(&self) -> &UnboundKernel {
+        &self.kernel
+    }
+}
 
 impl UnboundKernel {
     /// Bind arguments to this kernel, performing type checks and calling
     /// `clSetKernelArg` to set values.
+    ///
+    /// When OpenCL 1.2+ features are available, this call will attempt to check
+    /// the type of each argument before each call to `clSetKernelArg`. If the
+    /// types appear to be incompatible, as determined by
+    /// `KernelArg::is_param_type_compatible`, it will panic. If this behavior
+    /// isn't desired, `bind_arguments_unchecked` can be used instead.
     pub fn bind_arguments<T: KernelArgList>(self, arguments: T) -> Result<Kernel<T>> {
-        arguments.bind(self)
+        let required = self.num_args()? as usize;
+        let supplied = T::NUM_ARGS;
+        assert_eq!(
+            required, supplied,
+            "kernel arity mismatch - kernel requires {} arguments, but {} were specified",
+            required, supplied
+        );
+        arguments.bind(self, true)
+    }
+
+    /// Bind arguments to this kernel, without performing assertions for number
+    /// or type of arguments.
+    ///
+    /// # Safety
+    ///
+    /// This function is not unsafe in terms of memory safety, but it should
+    /// still be used with care, as it can lead to unexpected results if the
+    /// argument types don't match those of the OpenCL code.
+    pub fn bind_arguments_unchecked<T: KernelArgList>(self, arguments: T) -> Result<Kernel<T>> {
+        arguments.bind(self, false)
     }
 }
 
