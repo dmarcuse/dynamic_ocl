@@ -33,6 +33,8 @@ pub(crate) mod sealed {
     }
 }
 
+/// A trait implemented by OpenCL kernel types (`UnboundKernel` and `Kernel`) to
+/// provide access to OpenCL kernel information.
 pub trait KernelInfo: OclInfoInternal<Param = cl_kernel_info> + Sized {
     /// Get a reference to the unbound form of this kernel
     fn as_unbound(&self) -> &UnboundKernel;
@@ -62,6 +64,7 @@ pub trait KernelInfo: OclInfoInternal<Param = cl_kernel_info> + Sized {
     }
 }
 
+/// A type providing access to information about a single kernel argument.
 #[derive(Clone, Copy)]
 pub struct KernelArgInfo<'a> {
     kernel: &'a UnboundKernel,
@@ -97,6 +100,7 @@ impl<'a> Debug for KernelArgInfo<'a> {
 }
 
 flag_enum! {
+    /// OpenCL kernel argument address qualifier
     pub enum ArgAddressQualifier(cl_kernel_arg_address_qualifier) {
         Global = CL_KERNEL_ARG_ADDRESS_GLOBAL,
         Local = CL_KERNEL_ARG_ADDRESS_LOCAL,
@@ -106,6 +110,7 @@ flag_enum! {
 }
 
 flag_enum! {
+    /// OpenCL kernel argument access qualifier
     pub enum ArgAccessQualifier(cl_kernel_arg_access_qualifier) {
         ReadOnly = CL_KERNEL_ARG_ACCESS_READ_ONLY,
         WriteOnly = CL_KERNEL_ARG_ACCESS_WRITE_ONLY,
@@ -115,6 +120,7 @@ flag_enum! {
 }
 
 bitfield! {
+    /// OpenCL kernel argument type qualifier
     pub struct ArgTypeQualifier(cl_kernel_arg_type_qualifier) {
         pub const CONST = CL_KERNEL_ARG_TYPE_CONST;
         pub const RESTRICT = CL_KERNEL_ARG_TYPE_RESTRICT;
@@ -288,6 +294,9 @@ impl<K: KernelArg> Bound<K> {
     }
 }
 
+/// A helper trait allowing a pinned reference to a bound kernel argument list
+/// to be projected such that each argument is individually pinned, allowing
+/// destructuring and individual use.
 pub trait BindProject<'a>: sealed::BindProjectInternal<'a> {
     type Projected: 'a;
 }

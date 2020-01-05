@@ -1,3 +1,8 @@
+//! Command queues
+//!
+//! In OpenCL, command queues are used to perform operations that involve state,
+//! like interacting with buffers and executing kernels.
+
 mod types;
 
 use crate::buffer::flags::HostAccess;

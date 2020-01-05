@@ -1,3 +1,8 @@
+//! Contexts
+//!
+//! An OpenCL context represents a group of one or more devices from the same
+//! platform, allowing the sharing of programs and buffers.
+
 use crate::device::Device;
 use crate::queue::{Queue, QueueBuilder};
 use crate::raw::{

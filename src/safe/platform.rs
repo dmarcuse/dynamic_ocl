@@ -1,3 +1,9 @@
+//! Platforms
+//!
+//! An OpenCL platform is an OpenCL driver providing access to specialized
+//! hardware. A system can have zero or more platforms, and each platform can
+//! provide zero or more devices.
+
 use crate::device::{Device, DeviceType};
 use crate::raw::{
     clGetDeviceIDs, clGetPlatformIDs, clGetPlatformInfo, cl_platform_id, cl_platform_info, cl_ulong,

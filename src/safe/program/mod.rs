@@ -1,3 +1,8 @@
+//! Programs
+//!
+//! In OpenCL, a `Program` exports kernels that can be executed to perform work
+//! on specialized hardware.
+
 mod types;
 
 use crate::raw::{

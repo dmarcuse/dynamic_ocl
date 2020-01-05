@@ -51,13 +51,18 @@ flag_enum! {
 }
 
 bitfield! {
+    /// OpenCL device execution capabilities
     pub struct ExecutionCapabilities(cl_device_exec_capabilities) {
+        /// The device can execute OpenCL kernels
         pub const EXEC_KERNEL = CL_EXEC_KERNEL;
+
+        /// The device can execute native host kernels
         pub const EXEC_NATIVE_KERNEL = CL_EXEC_NATIVE_KERNEL;
     }
 }
 
 bitfield! {
+    /// OpenCL device affinity domain
     pub struct AffinityDomain(cl_device_affinity_domain) {
         pub const NUMA = CL_DEVICE_AFFINITY_DOMAIN_NUMA;
         pub const L4_CACHE = CL_DEVICE_AFFINITY_DOMAIN_L4_CACHE;
@@ -69,6 +74,7 @@ bitfield! {
 }
 
 bitfield! {
+    /// OpenCL device SVM capabilities
     pub struct SVMCapabilities(cl_device_svm_capabilities) {
         pub const COARSE_GRAIN_BUFFER = CL_DEVICE_SVM_COARSE_GRAIN_BUFFER;
         pub const FINE_GRAIN_BUFFER = CL_DEVICE_SVM_FINE_GRAIN_BUFFER;

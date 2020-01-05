@@ -21,9 +21,14 @@ mod sealed {
     }
 }
 
+/// A program builder type, specifying how a program should be built (e.g.
+/// compiled from source code, loaded from a binary, etc)
 pub trait ProgramBuilderType: sealed::ProgramBuilderTypeInternal {}
 
+/// A `ProgramBuilderType` implementation for programs to be compiled from
+/// source
 pub enum FromSource<'a> {
+    /// Build the program from a single source file
     Single(&'a [u8]),
 }
 
@@ -42,8 +47,11 @@ impl<'a> ProgramBuilderTypeInternal for FromSource<'a> {
         }
     }
 }
+
 impl<'a> ProgramBuilderType for FromSource<'a> {}
 
+/// A partially built OpenCL program
+#[must_use]
 pub struct ProgramBuilder<'a, T: ProgramBuilderType> {
     ctx: &'a Context,
     ty: T,
@@ -51,6 +59,7 @@ pub struct ProgramBuilder<'a, T: ProgramBuilderType> {
 }
 
 impl<'a> ProgramBuilder<'a, FromSource<'a>> {
+    /// Begin building a program with a single source file
     pub fn with_source(ctx: &'a Context, src: &'a impl AsRef<[u8]>) -> Self {
         Self {
             ctx,

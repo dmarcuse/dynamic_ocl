@@ -28,6 +28,8 @@ pub(crate) mod sealed {
     }
 }
 
+/// A trait implemented by OpenCL wrapper types to provide access to OpenCL
+/// information functions
 pub trait OclInfo: sealed::OclInfoInternal {
     /// Get raw binary info from OpenCL about this object.
     ///
@@ -120,6 +122,8 @@ pub trait OclInfo: sealed::OclInfoInternal {
 
 impl<T: sealed::OclInfoInternal> OclInfo for T {}
 
+/// A trait to get OpenCL information and automatically convert it to a more
+/// useful type.
 pub trait FromOclInfo: Sized {
     fn read<T: OclInfo>(from: &T, param_name: T::Param) -> Result<Self>;
 }

@@ -1,3 +1,8 @@
+//! Buffers
+//!
+//! OpenCL buffers represent memory segments which can be used to store and
+//! transfer data between the host and kernels.
+
 pub mod flags;
 mod types;
 
@@ -10,6 +15,15 @@ use std::fmt::{self, Debug, Formatter};
 use std::marker::PhantomData;
 pub use types::*;
 
+/// An OpenCL buffer
+///
+/// The lifetime parameter `'a` is used to encode the lifetime of buffers
+/// that use a backing host pointer. For other buffers, it will be `'static`.
+///
+/// The type parameter `H` is used to indicate the host accessibility level of
+/// the buffer, and provide compile-time safety when reading/writing the buffer.
+///
+/// The type parameter `T` represents the type of data stored in this buffer.
 // TODO: a buffer could be dropped while other OpenCL objects with implicit
 //  references to it (e.g. subbuffers, kernels, etc?) exist, violating safety
 //  guarantees?

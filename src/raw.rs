@@ -113,12 +113,14 @@ mod types {
     pub type cl_kernel_exec_info = cl_uint;
 
     #[derive(Debug, Clone, Copy)]
+    #[repr(C)]
     pub struct cl_image_format {
         pub image_channel_order: cl_channel_order,
         pub image_channel_data_type: cl_channel_type,
     }
 
     #[derive(Debug, Clone, Copy)]
+    #[repr(C)]
     pub struct cl_image_desc {
         pub image_type: cl_mem_object_type,
         pub image_width: size_t,
@@ -133,6 +135,7 @@ mod types {
     }
 
     #[derive(Debug, Clone, Copy)]
+    #[repr(C)]
     pub struct cl_buffer_region {
         pub origin: size_t,
         pub size: size_t,

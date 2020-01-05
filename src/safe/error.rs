@@ -34,6 +34,7 @@ impl Display for ApiError {
     }
 }
 
+/// An error related to OpenCL
 #[derive(thiserror::Error)]
 pub enum Error {
     /// Error that occurred within an OpenCL API call

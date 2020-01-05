@@ -12,6 +12,7 @@ use std::mem::size_of_val;
 use std::ptr::{null, null_mut};
 
 bitfield! {
+    /// Special command queue properties
     pub struct QueueProperties(cl_command_queue_properties) {
         pub const OUT_OF_ORDER_EXEC_MODE_ENABLE = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
         pub const PROFILING_ENABLE = CL_QUEUE_PROFILING_ENABLE;
@@ -20,7 +21,9 @@ bitfield! {
     }
 }
 
+/// A partially built command queue
 #[derive(Debug, Clone, Copy)]
+#[must_use]
 pub struct QueueBuilder<'c, 'd> {
     context: &'c Context,
     device: &'d Device,
@@ -29,6 +32,7 @@ pub struct QueueBuilder<'c, 'd> {
 }
 
 impl<'c, 'd> QueueBuilder<'c, 'd> {
+    /// Begin building a new command queue using the given context and device
     pub fn new(context: &'c Context, device: &'d Device) -> Self {
         Self {
             context,
@@ -38,6 +42,7 @@ impl<'c, 'd> QueueBuilder<'c, 'd> {
         }
     }
 
+    /// Set command queue properties
     pub fn properties(self, properties: QueueProperties) -> Self {
         Self {
             properties: Some(properties),
@@ -45,6 +50,7 @@ impl<'c, 'd> QueueBuilder<'c, 'd> {
         }
     }
 
+    /// Set the size of the command queue
     pub fn size(self, size: cl_uint) -> Self {
         Self {
             size: Some(size),
@@ -52,6 +58,9 @@ impl<'c, 'd> QueueBuilder<'c, 'd> {
         }
     }
 
+    /// Build the command queue, calling either `clCreateCommandQueue` or
+    /// `clCreateCommandQueueWithProperties` depending on builder parameters and
+    /// system OpenCL version.
     pub fn build(self) -> Result<Queue> {
         unsafe {
             let mut err = CL_SUCCESS;
@@ -92,6 +101,7 @@ impl<'c, 'd> QueueBuilder<'c, 'd> {
     }
 }
 
+/// A partially built command to interact with a buffer
 #[must_use]
 pub struct BufferCmd<'q, 'a, H: HostAccess, T: MemSafe> {
     pub(super) queue: &'q Queue,
@@ -178,6 +188,8 @@ impl<'q, 'a, H: HostAccess, T: MemSafe> BufferCmd<'q, 'a, H, T> {
     }
 }
 
+/// A trait implemented for types which can be used to specify kernel work
+/// sizes/offsets
 pub trait WorkDims {
     const NUM_WORK_DIMS: u32;
     fn as_ptr(&self) -> *const usize;
@@ -207,6 +219,7 @@ impl WorkDims for [usize; 3] {
     }
 }
 
+/// A partially built command to execute a kernel
 #[must_use]
 pub struct KernelCmd<'q, T: KernelArgList, W: WorkDims> {
     pub(super) queue: &'q Queue,

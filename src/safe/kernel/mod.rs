@@ -1,3 +1,5 @@
+//! Kernels
+
 mod types;
 
 use crate::program::Program;

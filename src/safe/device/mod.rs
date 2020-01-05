@@ -1,3 +1,8 @@
+//! Devices
+//!
+//! An OpenCL device is a physical or logical device which can be used to
+//! execute OpenCL kernels.
+
 mod types;
 
 use crate::context::Context;

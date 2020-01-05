@@ -9,6 +9,7 @@ use std::mem::{size_of, size_of_val};
 use std::ptr::null_mut;
 
 /// A trait indicating that a type may be safely stored in an OpenCL buffer.
+///
 /// OpenCL buffers allow data to be moved and manipulated in ways that may
 /// violate Rust's safety rules. Therefore, this trait may only be implemented
 /// for types that have the lifetime `'static`, are sized, have copy semantics,
@@ -83,7 +84,9 @@ unsafe impl MemSafe for cl_double {
     }
 }
 
+/// A partially built buffer
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct BufferBuilder<
     'c,
     H: HostAccess = HostReadWrite,
