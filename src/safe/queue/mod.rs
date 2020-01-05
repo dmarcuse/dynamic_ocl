@@ -3,6 +3,7 @@ mod types;
 use crate::buffer::flags::HostAccess;
 use crate::buffer::{AsBuffer, MemSafe};
 use crate::device::Device;
+use crate::kernel::{Kernel, KernelArgList};
 use crate::raw::*;
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
@@ -105,6 +106,19 @@ impl Queue {
             queue: self,
             buffer,
             offset: None,
+        }
+    }
+
+    /// Begin a new kernel execution command
+    pub fn kernel_cmd<'q, T: KernelArgList, W: WorkDims>(
+        &'q mut self,
+        kernel: &'q mut Kernel<T>,
+    ) -> KernelCmd<'q, T, W> {
+        KernelCmd {
+            queue: self,
+            kernel,
+            global_work_offset: None,
+            local_work_size: None,
         }
     }
 }

@@ -6,13 +6,13 @@ use crate::raw::*;
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use libc::size_t;
-use std::any::type_name;
 use std::ffi::c_void;
 use std::ffi::CString;
 use std::fmt::{self, Debug, Formatter};
 use std::marker::PhantomPinned;
 use std::mem::{size_of, size_of_val};
 use std::pin::Pin;
+use tynm::type_name;
 
 pub(crate) mod sealed {
     use super::{BindProject, KernelArgList};

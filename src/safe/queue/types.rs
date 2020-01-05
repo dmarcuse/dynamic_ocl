@@ -2,13 +2,14 @@ use crate::buffer::flags::HostAccess;
 use crate::buffer::MemSafe;
 use crate::context::Context;
 use crate::device::Device;
+use crate::kernel::{Kernel, KernelArgList, KernelInfo};
 use crate::queue::Queue;
 use crate::raw::*;
 use crate::safe::buffer::flags::{HostReadable, HostWritable};
 use crate::safe::buffer::AsBuffer;
 use crate::Result;
 use std::mem::size_of_val;
-use std::ptr::null_mut;
+use std::ptr::{null, null_mut};
 
 bitfield! {
     pub struct QueueProperties(cl_command_queue_properties) {
@@ -147,6 +148,111 @@ impl<'q, 'a, H: HostAccess, T: MemSafe> BufferCmd<'q, 'a, H, T> {
                 0,
                 null_mut(),
                 null_mut(),
+            ))?;
+
+            Ok(())
+        }
+    }
+
+    /// Fill the buffer with the given pattern, blocking until completion.
+    pub fn fill(self, pattern: &T) -> Result<()> {
+        unsafe {
+            let mut event = null_mut();
+
+            wrap_result!("clEnqueueFillBuffer" => clEnqueueFillBuffer(
+                self.queue.raw(),
+                self.buffer.as_buffer().raw(),
+                pattern as *const _ as _,
+                size_of_val(pattern),
+                self.offset.unwrap_or(0),
+                self.buffer.as_buffer().rust_size(),
+                0,
+                null_mut(),
+                &mut event as _
+            ))?;
+
+            wrap_result!("clWaitForEvents" => clWaitForEvents(1, &event as _))?;
+
+            Ok(())
+        }
+    }
+}
+
+pub trait WorkDims {
+    const NUM_WORK_DIMS: u32;
+    fn as_ptr(&self) -> *const usize;
+}
+
+impl WorkDims for usize {
+    const NUM_WORK_DIMS: u32 = 1;
+
+    fn as_ptr(&self) -> *const usize {
+        self as _
+    }
+}
+
+impl WorkDims for [usize; 2] {
+    const NUM_WORK_DIMS: u32 = 2;
+
+    fn as_ptr(&self) -> *const usize {
+        self[..].as_ptr()
+    }
+}
+
+impl WorkDims for [usize; 3] {
+    const NUM_WORK_DIMS: u32 = 3;
+
+    fn as_ptr(&self) -> *const usize {
+        self[..].as_ptr()
+    }
+}
+
+#[must_use]
+pub struct KernelCmd<'q, T: KernelArgList, W: WorkDims> {
+    pub(super) queue: &'q Queue,
+    pub(super) kernel: &'q Kernel<T>,
+    pub(super) global_work_offset: Option<W>,
+    pub(super) local_work_size: Option<W>,
+}
+
+impl<'q, T: KernelArgList, W: WorkDims> KernelCmd<'q, T, W> {
+    /// Set the global work offset
+    pub fn global_work_offset(self, global_work_offset: impl Into<Option<W>>) -> Self {
+        Self {
+            global_work_offset: global_work_offset.into(),
+            ..self
+        }
+    }
+
+    /// Set the local work size
+    pub fn local_work_size(self, local_work_size: impl Into<Option<W>>) -> Self {
+        Self {
+            local_work_size: local_work_size.into(),
+            ..self
+        }
+    }
+
+    /// Execute this kernel with the given global work size, blocking until
+    /// completion.
+    pub fn exec_ndrange(self, global_work_size: W) -> Result<()> {
+        unsafe {
+            let mut event = null_mut();
+
+            wrap_result!("clEnqueueNDRangeKernel" => clEnqueueNDRangeKernel(
+                self.queue.raw(),
+                self.kernel.as_unbound().raw(),
+                W::NUM_WORK_DIMS,
+                self.global_work_offset.map(|o| o.as_ptr()).unwrap_or(null()),
+                global_work_size.as_ptr(),
+                self.local_work_size.map(|o| o.as_ptr()).unwrap_or(null()),
+                0,
+                null(),
+                &mut event as _
+            ))?;
+
+            wrap_result!("clWaitForEvents" => clWaitForEvents(
+                1,
+                &event as _
             ))?;
 
             Ok(())

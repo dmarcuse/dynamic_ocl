@@ -126,6 +126,10 @@ impl UnboundKernel {
     pub fn bind_arguments_unchecked<T: KernelArgList>(self, arguments: T) -> Result<Kernel<T>> {
         arguments.bind(self, false)
     }
+
+    pub fn raw(&self) -> cl_kernel {
+        self.0
+    }
 }
 
 impl<T: KernelArgList> Kernel<T> {
