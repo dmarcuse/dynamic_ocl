@@ -14,6 +14,16 @@ impl ApiError {
     pub fn new(code: cl_int, context: &'static str) -> Self {
         Self { code, context }
     }
+
+    /// Get the error code of this error
+    pub fn code(&self) -> cl_int {
+        self.code
+    }
+
+    /// Get the context of this error
+    pub fn context(&self) -> &'static str {
+        self.context
+    }
 }
 
 impl Debug for ApiError {
