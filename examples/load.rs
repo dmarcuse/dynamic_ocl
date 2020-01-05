@@ -67,8 +67,12 @@ pub fn main() {
             println!("Created arguments: {:#?}", args);
 
             let kernel = program
-                .create_kernel(&CString::new("sum").unwrap(), args)
+                .create_kernel(&CString::new("sum").unwrap())
+                .unwrap()
+                .bind_arguments(args)
                 .unwrap();
+
+            println!("Created and bound kernel: {:#?}", kernel);
         }
     }
 }

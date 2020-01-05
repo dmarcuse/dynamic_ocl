@@ -1,24 +1,23 @@
+use super::{Kernel, UnboundKernel};
 use crate::buffer::flags::HostAccess;
 use crate::buffer::{Buffer, MemSafe};
-use crate::kernel::Kernel;
-use crate::raw::{clSetKernelArg, cl_kernel, cl_mem, cl_uint};
-use crate::safe::kernel::types::sealed::BindProjectInternal;
+use crate::raw::*;
+use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use libc::size_t;
-use std::ffi::c_void;
+use std::ffi::CString;
 use std::marker::PhantomPinned;
 use std::mem::{size_of, size_of_val};
 use std::pin::Pin;
 
 pub(crate) mod sealed {
     use super::{BindProject, KernelArgList};
-    use crate::kernel::Kernel;
-    use crate::raw::cl_kernel;
+    use crate::kernel::{Kernel, UnboundKernel};
     use crate::Result;
     use std::pin::Pin;
 
     pub trait KernelArgListInternal {
-        fn bind(self, kernel: cl_kernel) -> Result<Kernel<Self>>
+        fn bind(self, kernel: UnboundKernel) -> Result<Kernel<Self>>
         where
             Self: Sized + KernelArgList;
     }
@@ -27,6 +26,17 @@ pub(crate) mod sealed {
         fn project(self: Pin<&'a mut Self>) -> Self::Projected
         where
             Self: BindProject<'a>;
+    }
+}
+
+pub trait KernelInfo: OclInfoInternal<Param = cl_kernel_info> + Sized {
+    info_funcs! {
+        fn function_name(&self) -> CString = CL_KERNEL_FUNCTION_NAME;
+        fn num_args(&self) -> cl_uint = CL_KERNEL_NUM_ARGS;
+        fn reference_count(&self) -> cl_uint = CL_KERNEL_REFERENCE_COUNT;
+        fn context_raw(&self) -> cl_context = CL_KERNEL_CONTEXT;
+        fn program_raw(&self) -> cl_program = CL_KERNEL_PROGRAM;
+        fn attributes(&self) -> CString = CL_KERNEL_ATTRIBUTES;
     }
 }
 
@@ -95,9 +105,50 @@ impl<K: KernelArg> Bound<K> {
             })
         }
     }
+
+    /// Get a reference to the current value of this argument
+    pub fn get(&self) -> &K {
+        &self.value
+    }
+
+    /// Replace the current value of this argument with a new value, returning
+    /// the original value if successful.
+    pub fn replace(self: Pin<&mut Self>, value: K) -> Result<K> {
+        unsafe {
+            let (size, ptr) = value.as_raw_kernel_arg();
+
+            wrap_result!("clSetKernelArg" => clSetKernelArg(
+                self.kernel,
+                self.index,
+                size,
+                ptr as *const _ as _
+            ))?;
+
+            Ok(std::mem::replace(
+                &mut self.get_unchecked_mut().value,
+                value,
+            ))
+        }
+    }
+
+    /// Set this argument to a new value.
+    pub fn set(self: Pin<&mut Self>, value: K) -> Result<()> {
+        unsafe {
+            let (size, ptr) = value.as_raw_kernel_arg();
+
+            wrap_result!("clSetKernelArg" => clSetKernelArg(
+                self.kernel,
+                self.index,
+                size,
+                ptr as *const _ as _
+            ))?;
+
+            Ok(())
+        }
+    }
 }
 
-pub trait BindProject<'a>: BindProjectInternal<'a> {
+pub trait BindProject<'a>: sealed::BindProjectInternal<'a> {
     type Projected: 'a;
 }
 

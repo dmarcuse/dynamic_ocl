@@ -206,12 +206,12 @@ macro_rules! info_funcs {
     (
         $(
             $( #[ $outer:meta ] )*
-            pub fn $name:ident(&self) -> $ret:ty = $param:ident;
+            $vis:vis fn $name:ident(&self) -> $ret:ty = $param:ident;
         )*
     ) => {
         $(
             $( #[ $outer ] )*
-            pub fn $name(&self) -> crate::Result<$ret> {
+            $vis fn $name(&self) -> crate::Result<$ret> {
                 <Self as crate::util::OclInfo>::get_info(self, crate::raw::$param)
             }
         )*
@@ -411,17 +411,17 @@ macro_rules! kernel_arg_list_tuples {
                 $( $tyvar ),*
             ) {
                 #[allow(unused_variables, unused_assignments, unused_mut, non_snake_case)]
-                fn bind(self, kernel: cl_kernel) -> Result<Kernel<Self>> {
+                fn bind(self, kernel: UnboundKernel) -> Result<Kernel<Self>> {
                     let mut idx = 0;
                     let ( $( $tyvar ),* ) = self;
 
                     $(
-                        let $tyvar = Bound::bind(kernel, idx, $tyvar)?;
+                        let $tyvar = Bound::bind(kernel.0, idx, $tyvar)?;
                         idx += 1;
                     )*
 
                     Ok(Kernel {
-                        handle: kernel,
+                        kernel,
                         args: ( $( $tyvar ),* )
                     })
                 }
