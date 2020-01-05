@@ -1,8 +1,15 @@
 [package]
 name = "dynamic_ocl"
+description = "Dynamically-loaded OpenCL bindings"
 version = "0.1.0-alpha"
 authors = ["Dominic Marcuse <dominic@marcuse.us>"]
 edition = "2018"
+readme = "README.md"
+homepage = "https://github.com/dmarcuse/dynamic_ocl"
+repository = "https://github.com/dmarcuse/dynamic_ocl"
+keywords = [ "opencl", "ocl", "gpu", "gpgpu", "compute" ]
+categories = [ "api-bindings", "concurrency", "external-ffi-bindings", "hardware-support", "science" ]
+license = "Apache-2.0"
 
 [dependencies]
 libc = "0.2.66"
