@@ -18,6 +18,9 @@ use std::fmt::{self, Debug, Formatter};
 #[derive(PartialEq, Eq, Hash)]
 pub struct Context(pub(crate) cl_context);
 
+unsafe impl Send for Context {}
+unsafe impl Sync for Context {}
+
 impl Drop for Context {
     fn drop(&mut self) {
         unsafe {

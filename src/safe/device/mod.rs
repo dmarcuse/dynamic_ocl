@@ -27,6 +27,9 @@ pub use types::*;
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Device(pub(crate) cl_device_id);
 
+unsafe impl Send for Device {}
+unsafe impl Sync for Device {}
+
 impl Debug for Device {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.info_fmt(f)

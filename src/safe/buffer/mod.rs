@@ -36,6 +36,8 @@ pub struct Buffer<'a, H: HostAccess, T: MemSafe> {
     size: size_t,
 }
 
+unsafe impl<'a, H: HostAccess, T: MemSafe> Send for Buffer<'a, H, T> {}
+
 impl<'a, H: HostAccess, T: MemSafe> Drop for Buffer<'a, H, T> {
     fn drop(&mut self) {
         unsafe {

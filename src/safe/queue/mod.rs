@@ -21,6 +21,8 @@ pub use types::*;
 #[derive(PartialEq, Eq, Hash)]
 pub struct Queue(pub(crate) cl_command_queue);
 
+unsafe impl Send for Queue {}
+
 impl Drop for Queue {
     fn drop(&mut self) {
         unsafe {

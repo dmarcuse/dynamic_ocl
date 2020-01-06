@@ -20,6 +20,9 @@ use std::ptr::null_mut;
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Platform(pub(crate) cl_platform_id);
 
+unsafe impl Send for Platform {}
+unsafe impl Sync for Platform {}
+
 impl Debug for Platform {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.info_fmt(f)

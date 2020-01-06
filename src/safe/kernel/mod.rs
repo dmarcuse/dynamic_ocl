@@ -15,12 +15,16 @@ pub use types::*;
 #[derive(PartialEq, Eq, Hash)]
 pub struct UnboundKernel(cl_kernel);
 
+unsafe impl Send for UnboundKernel {}
+
 /// An executable OpenCL kernel, with arguments set.
 #[derive(PartialEq, Eq, Hash)]
 pub struct Kernel<T: KernelArgList> {
     kernel: UnboundKernel,
     args: T::Bound,
 }
+
+unsafe impl<T: KernelArgList> Send for Kernel<T> {}
 
 impl Drop for UnboundKernel {
     fn drop(&mut self) {

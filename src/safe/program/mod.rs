@@ -19,6 +19,9 @@ pub use types::*;
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Program(pub(crate) cl_program);
 
+unsafe impl Send for Program {}
+unsafe impl Sync for Program {}
+
 impl Drop for Program {
     fn drop(&mut self) {
         unsafe {
