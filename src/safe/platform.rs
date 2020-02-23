@@ -6,7 +6,8 @@
 
 use crate::device::{Device, DeviceType};
 use crate::raw::{
-    clGetDeviceIDs, clGetPlatformIDs, clGetPlatformInfo, cl_platform_id, cl_platform_info, cl_ulong,
+    clGetDeviceIDs, clGetPlatformIDs, clGetPlatformInfo, clUnloadPlatformCompiler, cl_platform_id,
+    cl_platform_info, cl_ulong,
 };
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
@@ -74,6 +75,7 @@ impl Platform {
         }
     }
 
+    /// Get a list of OpenCL devices from this platform.
     pub fn get_devices(self, typ: DeviceType) -> Result<Vec<Device>> {
         unsafe {
             let mut num_devices = 0u32;
@@ -122,5 +124,13 @@ impl Platform {
         pub fn vendor(&self) -> CString = CL_PLATFORM_VENDOR;
         pub fn extensions(&self) -> CString = CL_PLATFORM_EXTENSIONS;
         pub fn host_timer_resolution(&self) -> cl_ulong = CL_PLATFORM_HOST_TIMER_RESOLUTION;
+    }
+
+    /// Unload the OpenCL C program compiler for this platform.
+    pub fn unload_compiler(self) -> Result<()> {
+        unsafe {
+            wrap_result!("clUnloadPlatformCompiler" => clUnloadPlatformCompiler(self.raw()))?;
+            Ok(())
+        }
     }
 }

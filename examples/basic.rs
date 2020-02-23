@@ -86,5 +86,12 @@ pub fn main() {
 
             assert_eq!(data, [2, 4, 6]);
         }
+
+        platform.unload_compiler().unwrap();
+
+        println!(
+            "Unloaded compiler for platform {}",
+            platform.name().unwrap().to_string_lossy()
+        );
     }
 }
