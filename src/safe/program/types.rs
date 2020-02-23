@@ -1,6 +1,11 @@
 use crate::context::Context;
 use crate::program::Program;
-use crate::raw::{clBuildProgram, clCreateProgramWithSource, cl_int, cl_program, CL_SUCCESS};
+use crate::raw::{
+    clBuildProgram, clCreateProgramWithSource, cl_build_status, cl_int, cl_program,
+    cl_program_binary_type, CL_BUILD_ERROR, CL_BUILD_IN_PROGRESS, CL_BUILD_NONE, CL_BUILD_SUCCESS,
+    CL_PROGRAM_BINARY_TYPE_COMPILED_OBJECT, CL_PROGRAM_BINARY_TYPE_EXECUTABLE,
+    CL_PROGRAM_BINARY_TYPE_LIBRARY, CL_PROGRAM_BINARY_TYPE_NONE, CL_SUCCESS,
+};
 use crate::Result;
 use sealed::ProgramBuilderTypeInternal;
 use std::borrow::Cow;
@@ -106,5 +111,23 @@ impl<'a, T: ProgramBuilderType> ProgramBuilder<'a, T> {
 
             Ok(Program(program))
         }
+    }
+}
+
+flag_enum! {
+    pub enum ProgramBuildStatus(cl_build_status) {
+        None = CL_BUILD_NONE,
+        InProgress = CL_BUILD_IN_PROGRESS,
+        Success = CL_BUILD_SUCCESS,
+        Error = CL_BUILD_ERROR,
+    }
+}
+
+flag_enum! {
+    pub enum ProgramBinaryType(cl_program_binary_type) {
+        None = CL_PROGRAM_BINARY_TYPE_NONE,
+        CompiledObject = CL_PROGRAM_BINARY_TYPE_COMPILED_OBJECT,
+        Library = CL_PROGRAM_BINARY_TYPE_LIBRARY,
+        Executable = CL_PROGRAM_BINARY_TYPE_EXECUTABLE
     }
 }

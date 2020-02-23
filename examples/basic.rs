@@ -41,6 +41,9 @@ pub fn main() {
                 program.kernel_names()
             );
 
+            let build_info = program.build_info(device).unwrap();
+            println!("Build info: {:#?}", build_info);
+
             let a = ctx
                 .buffer_builder()
                 .host_access::<HostNoAccess>()

@@ -5,14 +5,19 @@
 
 mod types;
 
+use crate::context::Context;
+use crate::device::Device;
 use crate::raw::{
-    clGetProgramInfo, clReleaseProgram, clRetainProgram, cl_context, cl_program, cl_program_info,
-    cl_uint,
+    clGetProgramBuildInfo, clGetProgramInfo, clReleaseProgram, clRetainProgram, cl_context,
+    cl_device_id, cl_program, cl_program_build_info, cl_program_info, cl_uint,
 };
 use crate::util::sealed::OclInfoInternal;
 use crate::Result;
 use libc::size_t;
 use std::ffi::{c_void, CString};
+use std::fmt::{self, Debug, Formatter};
+use std::marker::PhantomData;
+use std::mem::ManuallyDrop;
 pub use types::*;
 
 /// An OpenCL program
@@ -82,5 +87,65 @@ impl Program {
         pub fn kernel_names(&self) -> CString = CL_PROGRAM_KERNEL_NAMES;
         pub fn scope_global_ctors_present(&self) -> bool = CL_PROGRAM_SCOPE_GLOBAL_CTORS_PRESENT;
         pub fn scope_global_dtors_present(&self) -> bool = CL_PROGRAM_SCOPE_GLOBAL_DTORS_PRESENT;
+    }
+
+    /// Get program build info for a given device
+    pub fn build_info(&self, Device(device): Device) -> Result<ProgramBuildInfo> {
+        let context = ManuallyDrop::new(Context(self.context_raw()?));
+
+        assert!(
+            context.devices_raw()?.contains(&device),
+            "program context does not include given device"
+        );
+
+        Ok(ProgramBuildInfo {
+            device,
+            program: self.0,
+            program_ref: PhantomData,
+        })
+    }
+}
+
+pub struct ProgramBuildInfo<'a> {
+    device: cl_device_id,
+    program: cl_program,
+    program_ref: PhantomData<&'a Program>,
+}
+
+impl OclInfoInternal for ProgramBuildInfo<'_> {
+    type Param = cl_program_build_info;
+    const DEBUG_CONTEXT: &'static str = "clGetProgramBuildInfo";
+
+    unsafe fn raw_info_internal(
+        &self,
+        param_name: Self::Param,
+        param_value_size: usize,
+        param_value: *mut c_void,
+        param_value_size_ret: *mut usize,
+    ) -> i32 {
+        clGetProgramBuildInfo(
+            self.program,
+            self.device,
+            param_name,
+            param_value_size,
+            param_value,
+            param_value_size_ret,
+        )
+    }
+}
+
+impl ProgramBuildInfo<'_> {
+    info_funcs! {
+        pub fn status(&self) -> ProgramBuildStatus = CL_PROGRAM_BUILD_STATUS;
+        pub fn options(&self) -> CString = CL_PROGRAM_BUILD_OPTIONS;
+        pub fn log(&self) -> CString = CL_PROGRAM_BUILD_LOG;
+        pub fn binary_type(&self) -> ProgramBinaryType = CL_PROGRAM_BINARY_TYPE;
+        pub fn global_variable_total_size(&self) -> size_t = CL_PROGRAM_BUILD_GLOBAL_VARIABLE_TOTAL_SIZE;
+    }
+}
+
+impl Debug for ProgramBuildInfo<'_> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        self.info_fmt(f)
     }
 }

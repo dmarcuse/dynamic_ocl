@@ -664,8 +664,8 @@ pub(crate) mod functions {
             fn clReleaseProgram(prorgam: cl_program) -> cl_int;
             fn clBuildProgram(program: cl_program, num_devices: cl_uint, device_list: *const cl_device_id, options: *const c_char, pfn_notify: Option<extern "C" fn(program: cl_program, user_data: *mut c_void)>, user_data: *mut c_void) -> cl_int;
 
-            fn clGetProgramInfo(program: cl_program, param_name: cl_program_info, param_value_size: size_t, param_value: *mut c_void, param_value_size_ret: *const size_t) -> cl_int;
-            fn clGetProgramBuildInfo(program: cl_program, device: cl_device_id, param_name: cl_program_build_info, param_value_size: size_t, param_value: *mut c_void, param_value_size_ret: size_t) -> cl_int;
+            fn clGetProgramInfo(program: cl_program, param_name: cl_program_info, param_value_size: size_t, param_value: *mut c_void, param_value_size_ret: *mut size_t) -> cl_int;
+            fn clGetProgramBuildInfo(program: cl_program, device: cl_device_id, param_name: cl_program_build_info, param_value_size: size_t, param_value: *mut c_void, param_value_size_ret: *mut size_t) -> cl_int;
 
             fn clCreateKernel(program: cl_program, kernel_name: *const c_char, errcode_ret: *mut cl_int) -> cl_kernel;
             fn clCreateKernelsInProgram(program: cl_program, num_kernels: cl_uint, kernels: *mut cl_kernel, num_kernels_ret: *mut cl_uint) -> cl_int;

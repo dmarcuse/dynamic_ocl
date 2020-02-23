@@ -359,7 +359,7 @@ macro_rules! flag_enum {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         #[repr( u32 )]
         pub enum $name {
-            $( $vname = $vval ),*
+            $( $vname = $vval as u32),*
         }
 
         impl $name {
@@ -380,12 +380,12 @@ macro_rules! flag_enum {
 
         impl crate::util::FromOclInfo for $name {
             fn read<T: crate::util::OclInfo>(from: &T, param_name: T::Param) -> crate::Result<Self> {
-                match <$typ>::read(from, param_name)? {
+                match u32::read(from, param_name)? as $typ {
                     $(
                         $vval => Ok(Self::$vname),
                     )*
                     value => Err(crate::Error::InvalidFlag {
-                        value,
+                        value: value as u32,
                         context: stringify!($name),
                     })
                 }
