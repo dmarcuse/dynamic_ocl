@@ -63,6 +63,10 @@ impl Platform {
                 &mut num_platforms as _
             ))?;
 
+            if num_platforms == 0 {
+                return Ok(vec![]);
+            }
+
             let mut ids = vec![null_mut(); num_platforms as usize];
 
             wrap_result!("clGetPlatformIDs" => clGetPlatformIDs(
@@ -87,6 +91,10 @@ impl Platform {
                 null_mut(),
                 &mut num_devices as _
             ))?;
+
+            if num_devices == 0 {
+                return Ok(vec![]);
+            }
 
             let mut ids = vec![null_mut(); num_devices as usize];
 
